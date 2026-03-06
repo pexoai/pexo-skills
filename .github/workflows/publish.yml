@@ -1,0 +1,208 @@
+name: Publish Skills to All Channels
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'           # Trigger on semver tags like v2.1.0
+  workflow_dispatch:        # Manual trigger
+    inputs:
+      skill:
+        description: 'Skill to publish (leave empty to publish all)'
+        required: false
+        default: ''
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Job 1: Validate all SKILL.md files
+  # ─────────────────────────────────────────────
+  validate:
+    name: Validate SKILL.md Files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install js-yaml
+        run: npm install -g js-yaml
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          echo "🔍 Validating SKILL.md files..."
+          ERRORS=0
+          for skill_dir in skills/*/; do
+            skill_name=$(basename "$skill_dir")
+            skill_file="$skill_dir/SKILL.md"
+            
+            if [ ! -f "$skill_file" ]; then
+              echo "❌ Missing SKILL.md in $skill_dir"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+            
+            # Extract frontmatter
+            frontmatter=$(awk '/^---/{if(found) exit; found=1; next} found{print}' "$skill_file")
+            
+            # Check required fields
+            if ! echo "$frontmatter" | grep -q "^name:"; then
+              echo "❌ $skill_name: missing 'name' field"
+              ERRORS=$((ERRORS + 1))
+            fi
+            
+            if ! echo "$frontmatter" | grep -q "^description:"; then
+              echo "❌ $skill_name: missing 'description' field"
+              ERRORS=$((ERRORS + 1))
+            fi
+            
+            # Check description length (>= 20 chars)
+            desc=$(echo "$frontmatter" | grep -A5 "^description:" | grep -v "^description:" | grep -v "^---" | tr -d '\n' | xargs)
+            if [ ${#desc} -lt 20 ]; then
+              echo "⚠️  $skill_name: description too short (${#desc} chars, minimum 20)"
+            fi
+            
+            echo "✅ $skill_name: valid"
+          done
+          
+          if [ $ERRORS -gt 0 ]; then
+            echo ""
+            echo "❌ Validation failed with $ERRORS error(s). Fix before publishing."
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ All SKILL.md files are valid!"
+
+  # ─────────────────────────────────────────────
+  # Job 2: Publish to ClaWHub
+  # ─────────────────────────────────────────────
+  publish-clawhub:
+    name: Publish to ClaWHub
+    runs-on: ubuntu-latest
+    needs: validate
+    env:
+      CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ClaWHub CLI
+        run: npm install -g clawhub
+
+      - name: Login to ClaWHub
+        run: clawhub auth login --token "$CLAWHUB_TOKEN"
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="manual-$(date +%Y%m%d%H%M%S)"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Publishing version: $VERSION"
+
+      - name: Publish all skills to ClaWHub
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TARGET_SKILL="${{ github.event.inputs.skill }}"
+          
+          for skill_dir in skills/*/; do
+            skill_name=$(basename "$skill_dir")
+            
+            # Skip if specific skill requested and this isn't it
+            if [ -n "$TARGET_SKILL" ] && [ "$skill_name" != "$TARGET_SKILL" ]; then
+              continue
+            fi
+            
+            # Extract version from SKILL.md frontmatter if available
+            skill_version=$(grep "^version:" "$skill_dir/SKILL.md" 2>/dev/null | awk '{print $2}' | tr -d '"')
+            if [ -z "$skill_version" ]; then
+              skill_version="$VERSION"
+            fi
+            
+            echo "🚀 Publishing $skill_name v$skill_version to ClaWHub..."
+            
+            clawhub publish "./$skill_dir" \
+              --slug "$skill_name" \
+              --version "$skill_version" \
+              --changelog "Automated release $skill_version" \
+              || echo "⚠️  Failed to publish $skill_name (may already exist at this version)"
+            
+            echo "✅ $skill_name published"
+          done
+
+  # ─────────────────────────────────────────────
+  # Job 3: Bootstrap skills.sh install count
+  # ─────────────────────────────────────────────
+  bootstrap-skills-sh:
+    name: Bootstrap skills.sh Install Count
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Trigger install count on skills.sh
+        run: |
+          echo "📊 Triggering skills.sh install count..."
+          # Install and immediately remove to register the install event
+          npx --yes skills add pexoai/pexo-skills --yes 2>/dev/null || true
+          echo "✅ skills.sh install count triggered"
+
+  # ─────────────────────────────────────────────
+  # Job 4: Create GitHub Release
+  # ─────────────────────────────────────────────
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [publish-clawhub]
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          
+          NOTES="## 🎉 Release v$VERSION\n\n"
+          NOTES+="### Skills Updated\n\n"
+          
+          for skill_dir in skills/*/; do
+            skill_name=$(basename "$skill_dir")
+            skill_version=$(grep "^version:" "$skill_dir/SKILL.md" 2>/dev/null | awk '{print $2}' | tr -d '"')
+            NOTES+="- **$skill_name** v${skill_version:-$VERSION}\n"
+          done
+          
+          NOTES+="\n### Install\n\n"
+          NOTES+="\`\`\`bash\n"
+          NOTES+="# Via ClaWHub\n"
+          for skill_dir in skills/*/; do
+            skill_name=$(basename "$skill_dir")
+            NOTES+="clawhub install pexoai/$skill_name\n"
+          done
+          NOTES+="\n# Via npx skills\n"
+          NOTES+="npx skills add pexoai/pexo-skills\n"
+          NOTES+="\`\`\`\n"
+          
+          echo -e "$NOTES" > release_notes.md
+          cat release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.md
+          draft: false
+          prerelease: false

@@ -1,0 +1,12 @@
+{
+  "name": "videoagent-image-studio",
+  "version": "2.1.0",
+  "description": "OpenClaw skill for unified image generation — zero API keys needed. Supports Midjourney, Flux, SDXL, Ideogram, Recraft and more via hosted proxy.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "undici": "^7.22.0"
+  }
+}

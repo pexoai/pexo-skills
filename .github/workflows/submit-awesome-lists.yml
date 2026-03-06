@@ -1,0 +1,54 @@
+name: Submit to Awesome Lists
+
+on:
+  workflow_dispatch:        # Manual trigger (run once after first publish)
+  push:
+    tags:
+      - 'v1.0.0'           # Auto-trigger only on first 1.0.0 release
+
+jobs:
+  submit-to-awesome-claude-skills:
+    name: Submit PR to awesome-claude-skills
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Git
+        run: |
+          git config --global user.name "pexoai"
+          git config --global user.email "pexoai@users.noreply.github.com"
+
+      - name: Fork and submit PR to ComposioHQ/awesome-claude-skills
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          echo "🔀 Forking awesome-claude-skills..."
+          gh repo fork ComposioHQ/awesome-claude-skills --clone --remote
+          cd awesome-claude-skills
+          
+          git checkout -b add-pexoai-pexo-skills
+          
+          # Add entry to the list (find the right section)
+          ENTRY="- [pexo-skills](https://github.com/pexoai/pexo-skills) - Content creation skills: image generation (8 AI models), audio production (TTS/music/SFX/voice clone), prompt engineering. Zero API key management."
+          
+          # Append to README if not already present
+          if ! grep -q "pexoai/pexo-skills" README.md; then
+            echo "" >> README.md
+            echo "$ENTRY" >> README.md
+            git add README.md
+            git commit -m "Add pexoai/pexo-skills - content creation skills collection"
+            git push origin add-pexoai-pexo-skills
+            
+            gh pr create \
+              --repo ComposioHQ/awesome-claude-skills \
+              --title "Add pexoai/pexo-skills: content creation skills (image, audio, video)" \
+              --body "Adding pexo-skills, a collection of content creation skills for OpenClaw/Claude Code:
+
+- **image-studio**: Generate images with 8 AI models (Midjourney, Flux, Ideogram, etc.) — zero API key setup
+- **audiomind**: TTS, music generation, sound effects, and voice cloning — one API key for all
+- **seedance-prompter**: Expert prompt engineering for Seedance 2.0 video generation
+
+GitHub: https://github.com/pexoai/pexo-skills
+ClaWHub: https://clawhub.ai/pexoai" \
+              || echo "⚠️  PR may already exist"
+          else
+            echo "ℹ️  Entry already exists in awesome-claude-skills"
+          fi

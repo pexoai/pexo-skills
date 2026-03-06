@@ -1,0 +1,28 @@
+{
+  "metadata": {
+    "pluginRoot": "./skills"
+  },
+  "skills": [
+    {
+      "name": "image-studio",
+      "source": "./skills/image-studio",
+      "description": "Generate images with 8 AI models (Midjourney, Flux, Ideogram, and more). Zero API keys needed.",
+      "strict": false,
+      "skills": ["./"]
+    },
+    {
+      "name": "audiomind",
+      "source": "./skills/audiomind",
+      "description": "TTS, music, sound effects, and voice cloning — all in one skill.",
+      "strict": false,
+      "skills": ["./"]
+    },
+    {
+      "name": "seedance-prompter",
+      "source": "./skills/seedance-prompter",
+      "description": "Expert prompt engineering for Seedance 2.0 video generation.",
+      "strict": false,
+      "skills": ["./"]
+    }
+  ]
+}

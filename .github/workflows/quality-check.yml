@@ -1,0 +1,113 @@
+name: Quality Check on PR
+
+on:
+  pull_request:
+    paths:
+      - 'skills/**'
+
+jobs:
+  skill-quality-check:
+    name: Skill Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check changed skills
+        id: changed
+        run: |
+          CHANGED=$(git diff --name-only origin/main...HEAD | grep "^skills/" | cut -d'/' -f2 | sort -u)
+          echo "skills=$CHANGED" >> $GITHUB_OUTPUT
+          echo "Changed skills: $CHANGED"
+
+      - name: Run quality checks on changed skills
+        run: |
+          SCORE_TOTAL=0
+          SKILL_COUNT=0
+          
+          for skill_dir in skills/*/; do
+            skill_name=$(basename "$skill_dir")
+            skill_file="$skill_dir/SKILL.md"
+            
+            if [ ! -f "$skill_file" ]; then
+              continue
+            fi
+            
+            SCORE=0
+            ISSUES=""
+            
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🔍 Checking: $skill_name"
+            
+            # 1. Has name field (20 pts)
+            if grep -q "^name:" "$skill_file"; then
+              SCORE=$((SCORE + 20))
+              echo "  ✅ Has name field"
+            else
+              ISSUES="$ISSUES\n  ❌ Missing name field"
+            fi
+            
+            # 2. Has description >= 20 chars (20 pts)
+            desc=$(awk '/^---/{if(found) exit; found=1; next} found && /^description:/{found2=1; next} found2 && /^[a-z]/{exit} found2{print}' "$skill_file" | tr -d '\n' | xargs)
+            if [ ${#desc} -ge 20 ]; then
+              SCORE=$((SCORE + 20))
+              echo "  ✅ Description length: ${#desc} chars"
+            else
+              ISSUES="$ISSUES\n  ❌ Description too short: ${#desc} chars (need >= 20)"
+            fi
+            
+            # 3. Has "Use when" or "When to Use" section (20 pts)
+            if grep -qi "use when\|when to use\|## when" "$skill_file"; then
+              SCORE=$((SCORE + 20))
+              echo "  ✅ Has 'Use When' section"
+            else
+              ISSUES="$ISSUES\n  ⚠️  Missing 'Use When' section (hurts discoverability)"
+            fi
+            
+            # 4. Has examples (15 pts)
+            if grep -qi "example\|demo\|user:\|agent:" "$skill_file"; then
+              SCORE=$((SCORE + 15))
+              echo "  ✅ Has examples"
+            else
+              ISSUES="$ISSUES\n  ⚠️  No examples found"
+            fi
+            
+            # 5. Has README.md (10 pts)
+            if [ -f "$skill_dir/README.md" ]; then
+              SCORE=$((SCORE + 10))
+              echo "  ✅ Has README.md"
+            else
+              ISSUES="$ISSUES\n  ⚠️  Missing README.md"
+            fi
+            
+            # 6. No hardcoded secrets (15 pts)
+            if ! grep -qiE "(api_key|secret|token|password)\s*=\s*['\"][a-zA-Z0-9]{10,}" "$skill_file"; then
+              SCORE=$((SCORE + 15))
+              echo "  ✅ No hardcoded secrets"
+            else
+              ISSUES="$ISSUES\n  ❌ Possible hardcoded secrets detected!"
+            fi
+            
+            echo "  📊 Score: $SCORE/100"
+            if [ -n "$ISSUES" ]; then
+              echo -e "$ISSUES"
+            fi
+            
+            SCORE_TOTAL=$((SCORE_TOTAL + SCORE))
+            SKILL_COUNT=$((SKILL_COUNT + 1))
+          done
+          
+          if [ $SKILL_COUNT -gt 0 ]; then
+            AVG=$((SCORE_TOTAL / SKILL_COUNT))
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📊 Average Quality Score: $AVG/100"
+            
+            if [ $AVG -lt 60 ]; then
+              echo "❌ Quality score below 60. Please improve skills before merging."
+              exit 1
+            elif [ $AVG -lt 80 ]; then
+              echo "⚠️  Quality score below 80. Consider improvements."
+            else
+              echo "✅ Quality score is good!"
+            fi
+          fi
