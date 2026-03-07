@@ -1,0 +1,9 @@
+{
+  "name": "videoagent-video-studio",
+  "version": "1.0.0",
+  "description": "OpenClaw skill for text-to-video and image-to-video — zero API keys via hosted proxy.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  }
+}

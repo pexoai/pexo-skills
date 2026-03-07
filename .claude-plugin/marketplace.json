@@ -4,22 +4,29 @@
   },
   "skills": [
     {
-      "name": "image-studio",
-      "source": "./skills/image-studio",
+      "name": "videoagent-image-studio",
+      "source": "./skills/videoagent-image-studio",
       "description": "Generate images with 8 AI models (Midjourney, Flux, Ideogram, and more). Zero API keys needed.",
       "strict": false,
       "skills": ["./"]
     },
     {
-      "name": "audiomind",
-      "source": "./skills/audiomind",
+      "name": "videoagent-audio-studio",
+      "source": "./skills/videoagent-audio-studio",
       "description": "TTS, music, sound effects, and voice cloning — all in one skill.",
       "strict": false,
       "skills": ["./"]
     },
     {
-      "name": "seedance-prompter",
-      "source": "./skills/seedance-prompter",
+      "name": "videoagent-video-studio",
+      "source": "./skills/videoagent-video-studio",
+      "description": "Text-to-video, image-to-video, and reference-to-video with 7 AI models. Zero API keys.",
+      "strict": false,
+      "skills": ["./"]
+    },
+    {
+      "name": "seedance-2.0-prompter",
+      "source": "./skills/seedance-2.0-prompter",
       "description": "Expert prompt engineering for Seedance 2.0 video generation.",
       "strict": false,
       "skills": ["./"]
