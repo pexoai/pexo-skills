@@ -84,6 +84,7 @@ Returns **401** if token is missing or invalid, **429** if generation limit reac
 ### `GET /api/stats`
 Real-time usage statistics. Requires `Authorization: Bearer <STATS_KEY>` if `STATS_KEY` env is set.
 
+**JSON response** (default):
 ```json
 {
   "using_kv": true,
@@ -93,9 +94,19 @@ Real-time usage statistics. Requires `Authorization: Bearer <STATS_KEY>` if `STA
   "rate_limit_hits": { "token": 7, "ip": 2 },
   "by_model": { "kling": 55, "minimax": 32, "veo": 28, "seedance": 18, "grok": 9 },
   "by_mode":  { "text-to-video": 98, "image-to-video": 44 },
+  "daily": [
+    { "date": "2026-02-22", "total": 8 },
+    { "date": "2026-02-23", "total": 14 }
+  ],
   "timestamp": "2026-03-07T10:00:00.000Z"
 }
 ```
+
+**HTML dashboard** — open in browser or append `?ui=1`:
+```
+https://your-proxy.vercel.app/api/stats?ui=1
+```
+Shows total generations, errors, tokens issued, rate-limit hits, per-model bar chart, and a 14-day daily trend — no extra tooling needed.
 
 ### `GET /api/status?jobId=`
 Async job status placeholder. Returns 501 — this proxy waits for completion and returns `videoUrl` directly.
