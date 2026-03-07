@@ -20,7 +20,7 @@ Turn any creative idea into a shot-by-shot production. The Director skill plans 
 
 ## Quick Start
 
-Just describe what you want:
+Just describe what you want in plain language:
 
 > "Make a 30-second brand video for a minimalist coffee brand. Instagram vertical format."
 
@@ -28,7 +28,7 @@ Just describe what you want:
 
 > "Produce a product launch reel for a smartwatch. 15 seconds, energetic."
 
-The Director will plan the shots, confirm with you, and then generate everything.
+No prompts to write, no model to pick. The Director handles everything and delivers the final assets.
 
 ---
 
