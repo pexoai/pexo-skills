@@ -1,4 +1,5 @@
 const { fal } = require("@fal-ai/client");
+const { trackGeneration, trackError, trackRateLimit } = require("../usage-store.js");
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || "";
 const FAL_KEY = process.env.FAL_KEY || "";
@@ -170,6 +171,7 @@ module.exports = async function handler(req, res) {
   }
 
   if (!authenticateRequest(req)) {
+    trackRateLimit().catch(() => {});
     return errorResponse(res, 401, "Invalid or missing API key");
   }
 
@@ -209,9 +211,11 @@ module.exports = async function handler(req, res) {
         return errorResponse(res, 400, `Unknown action: ${action}. Supported: tts, sfx, music`);
     }
 
+    trackGeneration(action).catch(() => {});
     return json(res, 200, result);
   } catch (err) {
     console.error(`[AudioMind] ${action} error:`, err.message);
+    trackError(action).catch(() => {});
     return errorResponse(res, 500, err.message);
   }
 };
