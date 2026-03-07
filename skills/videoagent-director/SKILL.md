@@ -54,20 +54,28 @@ From the user's message, infer:
 
 If any of these is truly ambiguous, ask **one clarifying question** only. Otherwise, proceed.
 
-### Step 2 — Plan internally (do not show this to the user)
+### Step 2 — Show a one-line storyboard for quick confirmation
 
-Decide:
-- Number of shots (3–8 based on length)
-- Shot type for each (establishing, close-up, action, cutaway, outro)
-- One consistent visual style for the whole production
-- Audio assignment per shot (music, SFX, or none)
-- For each shot: image prompt, video motion prompt, audio prompt
+Plan all shots internally, then show the user **only** a compact table — no prompts, no technical details:
 
-Use [references/storyboard_guide.md](references/storyboard_guide.md) as your internal reference.
+```
+🎬 **[Title]** · [N] shots · [format] · ~[duration]s
+
+| # | Scene | Audio |
+|---|-------|-------|
+| 1 | Rainy street, wide establishing | music |
+| 2 | Neon sign reflection in puddle | rain SFX |
+| 3 | Person with umbrella, tracking | city ambience |
+| 4 | Fade to black on neon glow | music |
+
+Looks good? I'll start generating.
+```
+
+Wait for a single word of approval (e.g. "yes", "go", "ok", "好的", or any positive reply) before proceeding.
 
 ### Step 3 — Execute shot by shot
 
-Call `director.js` once per shot. Do not wait for user confirmation — just start generating.
+Call `director.js` once per shot after user confirms.
 
 ```bash
 node {baseDir}/tools/director.js \
