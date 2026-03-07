@@ -30,6 +30,13 @@
       "description": "Expert prompt engineering for Seedance 2.0 video generation.",
       "strict": false,
       "skills": ["./"]
+    },
+    {
+      "name": "videoagent-director",
+      "source": "./skills/videoagent-director",
+      "description": "AI creative director — plans a storyboard from your concept and generates images, video clips, and audio shot by shot.",
+      "strict": false,
+      "skills": ["./"]
     }
   ]
 }

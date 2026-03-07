@@ -1,0 +1,10 @@
+{
+  "name": "videoagent-director",
+  "version": "1.0.0",
+  "description": "AI creative director — turns a concept into a storyboard and generates images, video clips, and audio shot by shot.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}
