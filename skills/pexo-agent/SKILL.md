@@ -2,25 +2,10 @@
 name: pexo-agent
 version: 1.0.0
 author: pexoai
-emoji: "🧠"
-tags:
-  - agent
-  - content-creation
-  - conversational
-  - orchestration
-  - multimodal
-  - end-to-end
-  - creative
-description: >
-  Your AI creative partner. Describe what you're imagining — Pexo thinks with you, picks the best AI models, and delivers a finished, ready-to-share video. No prompts. No editing. No learning curve.
+description: "Your AI creative partner. Describe what you're imagining — Pexo thinks with you, picks the best AI models, and delivers a finished, ready-to-share result. No prompts. No editing. No learning curve."
 homepage: https://pexo.ai
-metadata:
-  openclaw:
-    emoji: "🧠"
-    install:
-      - id: node
-        kind: node
-        label: "One API key — Pexo handles orchestration internally"
+tags: [agent, content-creation, conversational, multimodal, end-to-end, creative]
+setup: "One API key — all capabilities included"
 ---
 
 # Pexo — Your AI Creative Partner
