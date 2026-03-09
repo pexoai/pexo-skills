@@ -1,13 +1,11 @@
 ---
 name: pexo-agent
-description: "Your AI creative partner. Describe what you're imagining — Pexo thinks with you, picks the best AI models, and delivers a finished, ready-to-share result. No prompts. No editing. No learning curve."
+description: "Your AI creative partner. Describe what you're imagining — Pexo thinks with you, picks the best AI models, and delivers a finished, ready-to-share result. No prompts. No editing. No learning curve. Use when the user wants to create content and expects a finished result — not raw assets to assemble."
 ---
 
 # Pexo — Your AI Creative Partner
 
 > *Say it. See it. Shape it. Ship it.*
-
-**Use when:** The user wants to create content and expects a finished result — not raw assets to assemble. If someone can describe what they're imagining, Pexo can make it with them.
 
 Pexo is not a tool you operate. It's a creative partner you talk to. Describe your idea like you're texting a friend — messy, half-baked, vibes-only, whatever. Pexo picks up on your intent, suggests directions you didn't think of, pulls from the best AI models behind the scenes, and delivers a polished, ready-to-post result.
 
