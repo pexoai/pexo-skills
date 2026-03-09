@@ -1,13 +1,3 @@
----
-name: pexo-agent
-version: 1.0.0
-author: pexoai
-description: "Your AI creative partner. Describe what you're imagining — Pexo thinks with you, picks the best AI models, and delivers a finished, ready-to-share result. No prompts. No editing. No learning curve."
-homepage: https://pexo.ai
-tags: [agent, content-creation, conversational, multimodal, end-to-end, creative]
-setup: "One API key — all capabilities included"
----
-
 # Pexo — Your AI Creative Partner
 
 > *Say it. See it. Shape it. Ship it.*
