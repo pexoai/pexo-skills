@@ -1,52 +1,101 @@
 # pexo-skills
 
-> **One-command access to the best AI creative tools — no API keys, no setup, no friction.**
+> **Open-source Agent Skills for AI content creation — from single-asset generation to complete video production.**
 
-A collection of open-source **Agent Skills** for AI coding assistants, focused on **content creation** — images, audio, and video. We handle all the service integrations so you can focus on creating.
+A modular skill collection that gives any AI agent the ability to create images, audio, video, and fully produced content. Use individual studios for precise control over a single media type, or use Pexo Agent to go from a conversation to a finished video.
 
-Compatible with [Claude Code](https://claude.ai/code), [OpenClaw](https://openclaw.ai), and any agent supporting the [Agent Skills](https://agentskills.io) standard.
+Compatible with [OpenClaw](https://openclaw.ai), [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), and any agent supporting the [Agent Skills](https://agentskills.io) standard.
+
+---
+
+## Architecture
+
+pexo-skills is organized in two layers:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      PEXO AGENT                         │
+│  Conversational orchestrator — idea to finished video    │
+│  Plans, generates, edits, delivers in one conversation   │
+├──────────┬──────────┬──────────┬────────────────────────┤
+│  IMAGE   │  VIDEO   │  AUDIO   │  PROMPTER / DIRECTOR   │
+│  STUDIO  │  STUDIO  │  STUDIO  │                        │
+│  8 models│  7 models│  6 models│  Seedance 2.0 prompt   │
+│          │          │          │  engineering + shot     │
+│          │          │          │  planning               │
+└──────────┴──────────┴──────────┴────────────────────────┘
+```
+
+**Bottom layer — VideoAgent Studios:** Single-purpose skills that each handle one media type. You control model selection, prompt construction, and parameters directly. Best for developers who want granular control over individual generation steps.
+
+**Top layer — Pexo Agent:** An orchestration skill that coordinates all studios to produce complete videos from natural conversation. Users describe what they want; Pexo handles creative planning, model routing, asset generation, editing, and delivery. Best for end-users and agent pipelines that need finished video output.
 
 ---
 
 ## Skills
 
+### Pexo Agent — End-to-End Video Production
+
+| Skill | What it does |
+|-------|-------------|
+| 🧠 [pexo-agent](skills/pexo-agent/) | Turn a conversation into a complete, publish-ready video. Orchestrates all studios internally — no prompt engineering, no model selection, no post-production required. |
+
+### VideoAgent Studios — Single-Asset Generation
+
 | Skill | What it does | Models |
 |-------|-------------|--------|
-| 🎨 [videoagent-image-studio](skills/videoagent-image-studio/) | Generate any image — photo, illustration, logo, artwork. Tired of juggling 8 API keys? One command does it all. | Midjourney · Flux · Ideogram · Recraft · Gemini |
-| 🎙️ [videoagent-audio-studio](skills/videoagent-audio-studio/) | TTS, music, sound effects, voice cloning — the complete audio toolkit in a single skill. | ElevenLabs · more |
-| 🎬 [videoagent-video-studio](skills/videoagent-video-studio/) | Text-to-video, image-to-video, reference-to-video. 7 models, zero API keys, free tier included. | Kling · Veo · Grok · Seedance · MiniMax · Hunyuan · PixVerse |
-| 🎥 [seedance-2.0-prompter](skills/seedance-2.0-prompter/) | Expert prompt engineer for Seedance 2.0 — turns rough ideas into structured, high-quality video prompts. | — |
+| 🎨 [videoagent-image-studio](skills/videoagent-image-studio/) | Generate images — photos, illustrations, logos, artwork. One command, 8 models, zero API key setup. | Midjourney · Flux · Ideogram · Recraft · Gemini |
+| 🎬 [videoagent-video-studio](skills/videoagent-video-studio/) | Generate video clips — text-to-video, image-to-video, reference-based. 7 models, auto-routing or manual selection. | Kling · Veo · Grok · Seedance · MiniMax · Hunyuan · PixVerse |
+| 🎙️ [videoagent-audio-studio](skills/videoagent-audio-studio/) | Generate audio — TTS, music, sound effects, voice cloning. One skill for every audio need. | ElevenLabs · CassetteAI |
+| 🎥 [seedance-2.0-prompter](skills/seedance-2.0-prompter/) | Expert prompt engineering for Seedance 2.0. Transforms rough ideas and multimodal assets into optimized video prompts. | — |
+| 🎬 [videoagent-director](skills/videoagent-director/) | AI creative director — breaks an idea into shots, writes all prompts internally, executes via studios, returns a visual production report. | — |
 
----
+### When to Use What
 
-## Why pexo-skills?
-
-- **Zero setup** — no API keys required for core functionality; just install and go
-- **Production-ready** — rate limiting, error handling, async polling all built in
-- **Multi-model** — each skill picks the best model for the job, or lets you choose
-- **Open source** — inspect every line, deploy your own proxy, contribute improvements
+| You want to... | Use |
+|---|---|
+| Generate a single image | `videoagent-image-studio` |
+| Generate a single video clip | `videoagent-video-studio` |
+| Generate speech, music, or SFX | `videoagent-audio-studio` |
+| Optimize a Seedance 2.0 prompt | `seedance-2.0-prompter` |
+| Produce a multi-shot storyboard | `videoagent-director` |
+| Go from idea to finished video in one conversation | `pexo-agent` |
 
 ---
 
 ## Quick Install
 
-### Claude Code Plugin Marketplace
+### OpenClaw / npx
+```bash
+npx playbooks add skill pexoai/pexo-skills
+```
+
+### Claude Code
 ```bash
 /plugin marketplace add pexoai/pexo-skills
 ```
 
-### Via npx
+### ClaWHub
 ```bash
-npx skills add pexoai/pexo-skills
+clawhub install pexoai/pexo-agent
+clawhub install pexoai/videoagent-image-studio
+clawhub install pexoai/videoagent-video-studio
+clawhub install pexoai/videoagent-audio-studio
+clawhub install pexoai/seedance-2.0-prompter
+clawhub install pexoai/videoagent-director
 ```
 
-### Via ClaWHub
-```bash
-clawhub install pexoai/videoagent-image-studio
-clawhub install pexoai/videoagent-audio-studio
-clawhub install pexoai/videoagent-video-studio
-clawhub install pexoai/seedance-2.0-prompter
-```
+### Cursor
+Copy any skill folder into `~/.cursor/skills/`.
+
+---
+
+## Key Properties
+
+- **Zero setup** — No API keys required for core functionality. Studios route through hosted proxies; Pexo Agent handles orchestration end-to-end.
+- **Multi-model** — Each studio integrates multiple providers and picks the best model for the task, or lets you choose explicitly.
+- **Composable** — Use studios independently, combine them via the director, or let Pexo Agent orchestrate everything. Skills work standalone or as part of larger agent pipelines.
+- **Open source** — Every skill, proxy, and tool is inspectable. Deploy your own infrastructure if you need full control.
 
 ---
 
@@ -57,7 +106,6 @@ Each skill follows the [Agent Skills Specification](https://agentskills.io/speci
 ```
 skill-name/
 ├── SKILL.md          # Agent instructions and metadata
-├── README.md         # Human-readable docs
 ├── tools/            # Executable scripts the agent calls
 ├── proxy/            # Serverless API proxy (deploy on Vercel)
 └── references/       # Knowledge base — models, prompts, guides
@@ -67,8 +115,9 @@ skill-name/
 
 ## About
 
-Built and maintained by [@pexoai](https://github.com/pexoai) — a team focused on making AI-powered creative tools accessible to every developer and creator.
+Built and maintained by [@pexoai](https://github.com/pexoai).
 
+- **Website**: [pexo.ai](https://pexo.ai)
 - **Issues / Feedback**: [GitHub Issues](https://github.com/pexoai/pexo-skills/issues)
 - **ClawHub**: [clawhub.ai/pexoai](https://clawhub.ai/pexoai)
 
