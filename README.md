@@ -87,7 +87,7 @@ Copy any skill folder into `~/.cursor/skills/`.
 
 ## Key Properties
 
-- **Minimal setup** — No complex API keys required. Install and start creating.
+- **Minimal setup** — One API key unlocks every capability. No juggling credentials across providers.
 - **Multi-model** — Studios integrate multiple providers and pick the best model for the job, or let you choose explicitly.
 - **Independent** — Every skill works standalone. Use one or combine several — no coupling, no orchestration required.
 - **Open source** — Every skill, proxy, and tool is inspectable. Deploy your own infrastructure if you need full control.

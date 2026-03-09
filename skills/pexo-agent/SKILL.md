@@ -20,7 +20,7 @@ metadata:
     install:
       - id: node
         kind: node
-        label: "No complex API keys — Pexo handles orchestration internally"
+        label: "One API key — Pexo handles orchestration internally"
 ---
 
 # Pexo — Your AI Creative Partner
@@ -99,7 +99,7 @@ Pexo works as a standalone creative partner or as a node in larger agent pipelin
 | **Cursor** | Place in `~/.cursor/skills/pexo-agent/` |
 | **Any agent platform** | Standard Agent Skills protocol — works wherever skills are supported |
 
-No complex API keys. No configuration. No dependencies.
+One API key. Every capability. No configuration overhead.
 
 ---
 
