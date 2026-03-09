@@ -1,3 +1,8 @@
+---
+name: pexo-agent
+description: "Your AI creative partner. Describe what you're imagining — Pexo thinks with you, picks the best AI models, and delivers a finished, ready-to-share result. No prompts. No editing. No learning curve."
+---
+
 # Pexo — Your AI Creative Partner
 
 > *Say it. See it. Shape it. Ship it.*
