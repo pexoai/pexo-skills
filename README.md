@@ -2,7 +2,7 @@
 
 > **Open-source Agent Skills for AI content creation — pick the level of control you need.**
 
-A collection of independent skills for AI video creation, organized by the problem they solve. Use one, use all, or combine them however you want. Each skill works on its own — no dependencies between them.
+A collection of independent skills for AI content creation, organized by the problem they solve. Use one, use all, or combine them however you want. Each skill works on its own — no dependencies between them.
 
 Compatible with [OpenClaw](https://openclaw.ai), [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), and any agent supporting the [Agent Skills](https://agentskills.io) standard.
 
@@ -10,24 +10,24 @@ Compatible with [OpenClaw](https://openclaw.ai), [Claude Code](https://claude.ai
 
 ## Skills
 
-### 🧠 Agent — End-to-End Content Creation
+### 🧠 Agent — Your AI Creative Partner
 
-For when you want a finished video and don't want to think about how it gets made.
+For when you want a finished result and don't want to think about how it gets made. Describe what you're imagining — Pexo thinks with you, picks the best AI models, and delivers a polished, ready-to-share piece.
 
 | Skill | Description |
 |-------|-------------|
-| [pexo-agent](skills/pexo-agent/) | AI content creation agent. Describe what you want in conversation — Pexo plans, generates, edits, and delivers a complete, publish-ready video. No prompts to write, no models to choose, no clips to assemble. |
+| [pexo-agent](skills/pexo-agent/) | AI creative partner that turns conversation into complete, publish-ready content. No prompts to write, no models to choose, no editing skills required. Just describe your idea. |
 
 ---
 
 ### ✍️ Creative — Story & Prompt Craft
 
-For when you want to shape the creative direction before anything gets generated.
+For when you want to shape the creative direction before anything gets generated. Plan the narrative, design the storyboard, engineer the prompts.
 
 | Skill | Description |
 |-------|-------------|
 | [videoagent-director](skills/videoagent-director/) | AI creative director. Takes an idea, breaks it into a shot-by-shot storyboard, writes all prompts internally, and executes production. You approve the plan; it handles the rest. |
-| [seedance-2.0-prompter](skills/seedance-2.0-prompter/) | Expert prompt engineering for Seedance 2.0. Transforms rough ideas and multimodal assets into structured, optimized video generation prompts. |
+| [seedance-2.0-prompter](skills/seedance-2.0-prompter/) | Expert prompt engineering for Seedance 2.0. Transforms rough ideas and multimodal assets into structured, optimized generation prompts. |
 
 ---
 
@@ -37,7 +37,7 @@ For when you want direct control over a specific generation step — choose the 
 
 | Skill | Description | Models |
 |-------|-------------|--------|
-| [videoagent-image-studio](skills/videoagent-image-studio/) | Generate images — photos, illustrations, logos, artwork. One command, 8 models, zero API key setup. | Midjourney · Flux · Ideogram · Recraft · Gemini |
+| [videoagent-image-studio](skills/videoagent-image-studio/) | Generate images — photos, illustrations, logos, artwork. One command, 8 models. | Midjourney · Flux · Ideogram · Recraft · Gemini |
 | [videoagent-video-studio](skills/videoagent-video-studio/) | Generate video clips — text-to-video, image-to-video, reference-based. 7 models, auto-routing or manual selection. | Kling · Veo · Grok · Seedance · MiniMax · Hunyuan · PixVerse |
 | [videoagent-audio-studio](skills/videoagent-audio-studio/) | Generate audio — TTS, music, sound effects, voice cloning. One skill for every audio need. | ElevenLabs · CassetteAI |
 
@@ -47,7 +47,7 @@ For when you want direct control over a specific generation step — choose the 
 
 | You need... | Use |
 |---|---|
-| A finished video from a conversation | `pexo-agent` |
+| A finished piece from a conversation | `pexo-agent` |
 | A storyboard and directed production | `videoagent-director` |
 | An optimized Seedance 2.0 prompt | `seedance-2.0-prompter` |
 | A single image | `videoagent-image-studio` |
@@ -87,7 +87,7 @@ Copy any skill folder into `~/.cursor/skills/`.
 
 ## Key Properties
 
-- **Zero setup** — No API keys required for core functionality. Install and start using.
+- **Minimal setup** — No complex API keys required. Install and start creating.
 - **Multi-model** — Studios integrate multiple providers and pick the best model for the job, or let you choose explicitly.
 - **Independent** — Every skill works standalone. Use one or combine several — no coupling, no orchestration required.
 - **Open source** — Every skill, proxy, and tool is inspectable. Deploy your own infrastructure if you need full control.
