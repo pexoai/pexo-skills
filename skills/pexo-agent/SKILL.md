@@ -1,11 +1,11 @@
 ---
 name: pexo-agent
 description: >
-  Use this skill when the user wants to produce a short video (5–60 seconds).
-  Supports any video type: product ads, TikTok/Instagram/YouTube content,
-  brand videos, explainers, social clips.
-  USE FOR: video production, AI video, make a video,
-  product video, brand video, promotional clip, explainer video, short video.
+  AI content creation agent. Describe what you want in conversation — Pexo
+  plans, generates, and delivers finished videos and images. Any duration,
+  any style, any content type.
+  USE FOR: video production, AI video, make a video, image generation,
+  product video, brand video, explainer, social clip, ad, content creation.
 homepage: https://pexo.ai
 repository: https://github.com/pexoai/pexo-skills
 requires:
