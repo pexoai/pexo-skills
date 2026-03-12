@@ -33,6 +33,12 @@ _pexo_auth_header() {
   printf 'Authorization: Bearer %s' "$PEXO_API_KEY"
 }
 
+pexo_tmp_dir() {
+  local tmp_dir="${PEXO_TMP_DIR:-$HOME/.pexo/tmp}"
+  mkdir -p "$tmp_dir"
+  printf '%s\n' "$tmp_dir"
+}
+
 _pexo_is_json() {
   local payload="${1:-}"
   [[ -n "$payload" ]] && jq -e . >/dev/null 2>&1 <<<"$payload"

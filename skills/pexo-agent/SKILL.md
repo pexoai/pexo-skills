@@ -18,7 +18,7 @@ requires:
     - file
 metadata:
   author: pexoai
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 # Pexo Agent
@@ -49,7 +49,7 @@ You are a communication channel between the user and Pexo. You are NOT a creativ
 - **User → Pexo**: relay the user's words to Pexo verbatim. Do NOT add information the user did not explicitly state. In particular, NEVER fill in duration or aspect ratio on your own — these are the most commonly fabricated details and they directly determine what Pexo produces.
 - **Pexo → User**: relay Pexo's responses to the user **completely**. Pexo often uses **bold text** to mark key questions, confirmation requests, or decision points. When you see emphasized content in Pexo's response, it is almost certainly something the user needs to see and act on. Your message to the user MUST carry all such critical consultation and confirmation items — do not drop, summarize away, or answer them yourself. If Pexo sends multiple pieces of information in one response (e.g. previews AND questions), relay ALL of them.
 - **User feedback → Pexo**: when the user gives revision feedback, pass it through exactly. Do NOT "improve" or supplement it with your own observations.
-- **Images/videos from user**: upload them via `pexo-upload.sh` and reference by asset ID. Do NOT describe the visual content in text — your visual understanding is unreliable and will mislead Pexo.
+- **Images/videos from user**: upload them via `pexo-upload.sh` and reference them by asset ID wrapped in the required tags: `<original-image>...</original-image>`, `<original-video>...</original-video>`, or `<original-audio>...</original-audio>`. Bare asset IDs in `pexo-chat.sh` message text are not parsed by Pexo. Do NOT describe the visual content in text — your visual understanding is unreliable and will mislead Pexo.
 
 ### 2. Decision Routing
 
@@ -61,7 +61,7 @@ All creative decisions belong to the user. Use `nextAction` + `event` type to ro
 | RESPOND | `message` (Pexo asks a question) | Relay the question to the user. Wait for their answer. | **YES — NEVER answer for user** |
 | RESPOND | `message` (informational) | Relay or briefly summarize to user | Optional |
 | RESPOND | `document` | Mention the document to user; share key details if relevant | Optional |
-| DELIVER | `final_video` (assetId) | Fetch `downloadUrl` via `pexo-asset-get.sh`. Send URL to user. Ask if they are satisfied. | **YES** |
+| DELIVER | `final_video` (assetId) | Fetch `downloadUrl` via `pexo-asset-get.sh`. Deliver to user per Asset Delivery rules (prefer file, fallback to OSS URL). Ask if satisfied. | **YES** |
 | WAIT | — | Notify user that production is underway. Poll again. | No, but MUST inform |
 | FAILED | — | Read `nextActionHint`. Explain the issue to user in plain language. | **YES** |
 | RECONNECT | — | Send a message via `pexo-chat.sh` (e.g. "continue") to re-establish. Inform user. | No, but MUST inform |
@@ -72,15 +72,24 @@ All creative decisions belong to the user. Use `nextAction` + `event` type to ro
 
 ### 3. Asset Delivery
 
-- ALWAYS use `pexo-asset-get.sh` to get `downloadUrl` (a public URL).
-- ALWAYS send the **complete, unmodified** `downloadUrl` to the user — including all query parameters (`?OSSAccessKeyId=...&Expires=...&Signature=...`). These parameters are part of the signed URL; truncating or reformatting them makes the link unusable.
-- NEVER download files to local filesystem.
-- NEVER send local file paths to the user.
+Use `pexo-asset-get.sh` to get asset details including `downloadUrl`. Then deliver through the best available channel:
+
+**Delivery priority:** Downloading the file via `downloadUrl`, deliver it directly to the user. If the file cannot be delivered, provide the `downloadUrl` for the user.
+
+Before your first delivery in a session, check what delivery capabilities your platform provides. If you cannot determine this, default to the OSS URL approach.
+
+**URL integrity rules (when sending OSS URLs):**
+
+- Send the **complete, unmodified** `downloadUrl` — including all query parameters (`?OSSAccessKeyId=...&Expires=...&Signature=...`). These parameters are part of the signed URL; truncating or reformatting them makes the link unusable.
 - NEVER wrap the URL in markdown link syntax `[text](url)` — some platforms break long URLs in markdown. Send the raw URL as plain text.
 - If a URL has expired, re-fetch via `pexo-asset-get.sh`.
-- For platform-specific delivery details → read `references/PLATFORM-DELIVERY.md`.
 
-**Example — correct delivery:**
+**Hard prohibitions:**
+
+- NEVER send local file paths to the user.
+- NEVER skip delivery — the user must receive the video through at least one working channel.
+
+**Example — OSS URL delivery:**
 
 ```
 pexo-asset-get.sh <project_id> <asset_id>
@@ -100,8 +109,8 @@ https://pexo-assets.oss-cn-hangzhou.aliyuncs.com/v/abcd1234/video.mp4?OSSAccessK
 ### 4. Polling Discipline
 
 - When `nextAction` is `WAIT`: **only** call `pexo-project-get.sh` (read-only check). Do NOT call `pexo-chat.sh`. Do NOT send any message to Pexo. Sending messages while Pexo is working triggers duplicate production — the user's video will be generated multiple times, wasting resources and creating confusion.
-- Poll interval: **60 seconds**. Do NOT poll more frequently. Wait the full 60 seconds between each `pexo-project-get.sh` call.
-- Between polls, keep the user informed (see Progress Updates below).
+- Poll interval: **60 seconds minimum**. Do NOT poll more frequently. Wait the full 60 seconds between each `pexo-project-get.sh` call.
+- **Polling ≠ reporting.** The 60-second interval is how often you check status technically. It is NOT how often you talk to the user. See Progress Updates below for user-facing communication cadence.
 - When `nextAction` changes from `WAIT` to something else (e.g. `RESPOND`), STOP polling and handle the new state immediately per the Decision Routing table.
 
 ### 5. Project Lifecycle
@@ -132,17 +141,20 @@ If the user gives enough to start, start. Do not over-question. Pexo itself will
 
 ### Progress Updates
 
-When `nextAction` is `WAIT`, keep the user informed:
+When `nextAction` is `WAIT`, keep the user informed — but don't over-communicate. The goal is to be reassuring without being intrusive.
 
-**Time estimate**: production time depends on video length and complexity. Use this baseline to set user expectations:
+**Time estimate baseline:**
 - A ~15s video typically takes **15–20 minutes**
-- Longer videos take proportionally longer. A 60s video — whether generated in one pass or split into segments — may take significantly more time
+- Longer videos take proportionally longer. A 60s video may take significantly more time
 - Estimate based on the actual request and inform the user accordingly
 
-- **First notification** (after sending to Pexo): tell the user your estimated wait time based on the video length. e.g. "Production started — for a 15-second video this typically takes about 15–20 minutes. I'll keep you updated."
-- **Each poll** (~every 60s): brief status — "Still generating, about X minutes in."
-- **Approaching your estimate**: "About the normal timeline. Still in progress."
-- **Exceeding your estimate by 50%+**: "Taking a bit longer than usual. I can wait a bit more, or we can try sending Pexo a new message."
+**Communication cadence (recommended defaults):**
+
+- **Start notification** (immediately after sending to Pexo): tell the user the estimated wait time and your reporting plan. e.g. "Production started — for a ~15s video this typically takes 15–20 minutes. I'll update you on key progress or roughly every 5 minutes."
+- **Periodic summary (~every 5 minutes)**: a brief one-liner if nothing has changed. e.g. "Still in progress, about 10 minutes in." Do NOT report every 60-second poll — that is far too frequent.
+- **Key events (report immediately)**: when `nextAction` changes (WAIT → RESPOND / DELIVER / FAILED), report to the user right away and take action per the Decision Routing table.
+- **Overdue notice**: if exceeding the estimated time by 50%+, proactively inform the user and offer options. e.g. "Taking longer than expected. I can keep waiting, or we can try a different approach."
+- **User override**: the user may request a different cadence (e.g. "just tell me when it's done"). Respect their preference. The above is only the default recommendation.
 
 ### Delivery Presentation
 
@@ -178,6 +190,20 @@ Reference tag formats:
 <original-audio>asset-id</original-audio>
 ```
 
+This wrapping is mandatory. If you send only the plain `asset_id` in `pexo-chat.sh`, Pexo will not receive that asset as an input reference.
+
+Wrong:
+
+```bash
+pexo-chat.sh <project_id> "Use asset a_KvFT5Hw as the reference image"
+```
+
+Right:
+
+```bash
+pexo-chat.sh <project_id> "Use <original-image>a_KvFT5Hw</original-image> as the reference image"
+```
+
 | Asset type | Examples | Impact on quality |
 |---|---|---|
 | Subject images | Product photos, personal photos, scene shots | Accurate visual representation |
@@ -197,7 +223,7 @@ Fewer, richer messages beat many thin ones. Each message to Pexo costs tokens an
 
 | `nextAction` | Meaning | What to do |
 |---|---|---|
-| `WAIT` | Pexo is producing | Poll in 60s. Inform user. NEVER send messages. |
+| `WAIT` | Pexo is producing | Poll every 60s. Report per Progress Updates cadence. NEVER send messages to Pexo. |
 | `RESPOND` | Pexo needs input | Read `recentMessages`. Route per Decision Routing table. |
 | `DELIVER` | Video complete | Fetch `downloadUrl`, deliver to user. |
 | `FAILED` | Production failed | Explain to user. Retry with adjusted request if appropriate. |
@@ -225,11 +251,11 @@ All interaction with Pexo goes through these shell scripts. On API error (exit 1
 
 | Script | Usage | Returns |
 |---|---|---|
-| `pexo-project-create.sh` | `[project_name]` | `project_id` string |
-| `pexo-project-list.sh` | `[page_size]` | Projects JSON |
+| `pexo-project-create.sh` | `[project_name]` or `--name <name>` | `project_id` string |
+| `pexo-project-list.sh` | `[page_size]` or `--page <n> --page-size <n>` | Projects JSON |
 | `pexo-project-get.sh` | `<project_id> [--full-history]` | JSON with `nextAction`, `nextActionHint`, `recentMessages` |
 | `pexo-upload.sh` | `<project_id> <file_path>` | `asset_id` string |
-| `pexo-chat.sh` | `<project_id> <message> [--choice <id>]` | Async acknowledgement JSON with `projectId`, `status`, `pollAfterSeconds` |
+| `pexo-chat.sh` | `<project_id> <message> [--choice <id>] [--timeout <s>]` | Local acknowledgement JSON: `projectId`, `status:"submitted"`, `pollAfterSeconds:60` (not a server response — the message is sent asynchronously) |
 | `pexo-asset-get.sh` | `<project_id> <asset_id>` | Asset JSON with `downloadUrl` |
 | `pexo-doctor.sh` | (no args) | Diagnostic report (config, connectivity, dependencies) |
 

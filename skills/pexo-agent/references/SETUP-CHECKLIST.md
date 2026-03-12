@@ -14,7 +14,12 @@ PEXO_API_KEY="sk-<your-api-key>"
 EOF
 ```
 
-Get your API key at: https://pexo.ai (sign up or log in → API Keys)
+Get your API key at: https://pexo.ai
+
+- If you are not logged in:
+  follow the page guidance to sign up / log in first.
+- If you are already logged in:
+  click the top-right avatar → `API Keys` → `Create Key`, then copy the new key.
 
 ### 2. Run diagnostics
 

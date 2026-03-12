@@ -182,6 +182,17 @@ Real statuses:
 - `404`: asset not found, or asset/project ownership mismatch
 - `500`: backend/internal failure
 
+Secondary download failures after metadata fetch:
+
+- `403`: signed `downloadUrl` expired or object storage denied access
+- `000`: local network failure while downloading the signed URL
+- local filesystem write failure: `~/.pexo/tmp/` is not writable or disk is full
+
+Notes:
+
+- The script now downloads `downloadUrl` into `~/.pexo/tmp/` (or `$PEXO_TMP_DIR`) and returns both `url` and `localPath`.
+- If the asset metadata exists but `downloadUrl` is absent, the script returns `localPath: null`.
+
 ### `pexo-doctor.sh`
 
 This script does not use the shared request wrapper, but its API check uses the same real endpoint:
@@ -236,7 +247,8 @@ Signed URLs are temporary.
 Action:
 
 1. Re-run `pexo-asset-get.sh <project_id> <asset_id>`.
-2. Deliver the fresh `downloadUrl`.
+2. The script will fetch a fresh `downloadUrl` and re-download the file into `~/.pexo/tmp/`.
+3. Deliver the fresh `downloadUrl`.
 
 ### Upload fails locally with “unsupported file type”
 

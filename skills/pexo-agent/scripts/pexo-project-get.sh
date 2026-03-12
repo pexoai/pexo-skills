@@ -58,7 +58,7 @@ EOF
 #   FAILED    — executionStatus=FAILED
 #   DELIVER   — executionStatus=COMPLETED AND serviceStatus≠PROCESSING (COMPLETED not used in practice)
 #   RESPOND   — executionStatus=INTERRUPTED
-#   RECONNECT — executionStatus=RUNNING AND serviceStatus=IDLE (guide user to re-initiate conversation via pexo-chat.sh)
+#   RECONNECT — executionStatus=RUNNING AND serviceStatus=IDLE (should re-initiate conversation via pexo-chat.sh)
 #   WAIT      — all other combinations
 #
 # recentMessages format (simplified, actionable-only):
@@ -144,13 +144,13 @@ if [[ "$exec_status" == "FAILED" ]]; then
   hint="Production failed. Read recentMessages for error details. Send a new message via pexo-chat.sh to retry with a modified brief."
 elif [[ "$exec_status" == "COMPLETED" && "$svc_status" != "PROCESSING" ]]; then
   next_action="DELIVER"
-  hint="Production complete. Find assetId in recentMessages[event=final_video], fetch it with pexo-asset-get.sh, and deliver the downloadUrl to the user."
+  hint="Production complete. Find assetId in recentMessages[event=final_video], fetch it with pexo-asset-get.sh."
 elif [[ "$exec_status" == "INTERRUPTED" ]]; then
   next_action="RESPOND"
   hint="Pexo is waiting for your input. Read recentMessages to understand what is needed, then call pexo-chat.sh to respond."
 elif [[ "$exec_status" == "RUNNING" && "$svc_status" == "IDLE" ]]; then
   next_action="RECONNECT"
-  hint="Connection may have been lost (worklet exited while run was in progress). Guide the user to re-initiate the conversation by sending a new message via pexo-chat.sh."
+  hint="Connection may have been lost. Re-initiate the conversation by sending a new message via pexo-chat.sh."
 else
   # IDLE+IDLE, IDLE+PROCESSING, RUNNING+PROCESSING
   next_action="WAIT"

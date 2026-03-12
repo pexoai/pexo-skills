@@ -11,6 +11,11 @@ Description:
   Submit a message to an existing Pexo project.
   This script does not keep the SSE stream open. It only waits until /api/chat
   acknowledges the request by opening the stream, then it disconnects.
+  If the message references uploaded assets, wrap each asset ID with one of:
+    <original-image>asset_id</original-image>
+    <original-video>asset_id</original-video>
+    <original-audio>asset_id</original-audio>
+  Bare asset IDs inside the message are ignored by Pexo and rejected locally.
 
 Options:
   --choice <id>     Send the selected preview asset ID as choices.preview_id
@@ -28,6 +33,7 @@ Returns:
     }
 
 Common errors:
+  Local validation error: asset IDs in <message> are not wrapped in valid tags
   400  Invalid request body
   401  Invalid API key or auth failure
   404  Project not found
@@ -38,6 +44,39 @@ EOF
 }
 
 source "$(dirname "$0")/_common.sh"
+
+strip_valid_asset_tags() {
+  local text="$1"
+  printf '%s' "$text" \
+    | sed -E 's#<original-image>((a_[1-9A-HJ-NP-Za-km-z]{7,24})|([0-9A-Z]{26}))</original-image># #g' \
+    | sed -E 's#<original-video>((a_[1-9A-HJ-NP-Za-km-z]{7,24})|([0-9A-Z]{26}))</original-video># #g' \
+    | sed -E 's#<original-audio>((a_[1-9A-HJ-NP-Za-km-z]{7,24})|([0-9A-Z]{26}))</original-audio># #g'
+}
+
+find_unwrapped_asset_ids() {
+  local text="$1"
+  printf '%s' "$text" \
+    | tr -cs 'A-Za-z0-9_' '\n' \
+    | awk '/^([0-9A-Z]{26}|a_[1-9A-HJ-NP-Za-km-z]{7,24})$/ && !seen[$0]++'
+}
+
+validate_message_asset_references() {
+  local text="$1"
+  local stripped invalid_refs joined
+
+  stripped=$(strip_valid_asset_tags "$text")
+  invalid_refs=$(find_unwrapped_asset_ids "$stripped")
+
+  if [[ -z "$invalid_refs" ]]; then
+    return 0
+  fi
+
+  joined=$(printf '%s\n' "$invalid_refs" | awk 'BEGIN { first = 1 } { printf("%s%s", first ? "" : ", ", $0); first = 0 }')
+  echo 'Error: asset IDs in <message> must be wrapped with <original-image>...</original-image>, <original-video>...</original-video>, or <original-audio>...</original-audio>.' >&2
+  printf 'Invalid asset reference(s): %s\n' "$joined" >&2
+  echo 'Example: pexo-chat.sh <project_id> "Use <original-image>a_xxx</original-image> as the reference image."' >&2
+  return 1
+}
 
 case "${1:-}" in
   -h|--help)
@@ -80,6 +119,8 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+validate_message_asset_references "$msg" || exit 2
 
 ts=$(date +%s000)
 
