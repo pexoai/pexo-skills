@@ -1,11 +1,11 @@
 ---
 name: pexo-agent
 description: >
-  Use this skill when the user wants to produce a short video (5–60 seconds).
-  Supports any video type: product ads, TikTok/Instagram/YouTube content,
-  brand videos, explainers, social clips.
-  USE FOR: video production, AI video, make a video,
-  product video, brand video, promotional clip, explainer video, short video.
+  Use this skill when the user wants to produce a video or image.
+  Supports any video type and length: product ads, TikTok/Instagram/YouTube content,
+  brand videos, explainers, social clips, and more. Also generates images.
+  USE FOR: video production, AI video, make a video, image generation, make an image,
+  product video, brand video, promotional clip, explainer video.
 homepage: https://pexo.ai
 repository: https://github.com/pexoai/pexo-skills
 requires:
@@ -23,7 +23,7 @@ metadata:
 
 # Pexo Agent
 
-Pexo is an AI video creation agent. You interact with Pexo through conversation — describe what you want, share reference materials if you have them, and Pexo handles the creative production. During the process, Pexo may ask clarifying questions, propose creative directions, and present previews for your feedback. Output: short videos (5–60 s), aspect ratios 16:9 / 9:16 / 1:1.
+Pexo is an AI content creation agent. You interact with Pexo through conversation — describe what you want, share reference materials if you have them, and Pexo handles the creative production. During the process, Pexo may ask clarifying questions, propose creative directions, and present previews for your feedback. Output: videos of any length and images, aspect ratios 16:9 / 9:16 / 1:1.
 
 ## Prerequisites
 
@@ -219,7 +219,7 @@ Fewer, richer messages beat many thin ones. Each message to Pexo costs tokens an
 
 ## Pipeline Lifecycle
 
-`pexo-chat.sh` returns immediately. Video production takes **15–20 minutes** for a short video (~15s), longer for more complex or longer videos. Use `pexo-project-get.sh` to check status.
+`pexo-chat.sh` returns immediately. Production takes **15–20 minutes** for a short video (~15s), longer for more complex or longer content. Use `pexo-project-get.sh` to check status.
 
 | `nextAction` | Meaning | What to do |
 |---|---|---|
