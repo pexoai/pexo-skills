@@ -6,12 +6,22 @@ description: >
   brand videos, explainers, social clips.
   USE FOR: video production, AI video, make a video,
   product video, brand video, promotional clip, explainer video, short video.
+homepage: https://pexo.ai
+repository: https://github.com/pexoai/pexo-skills
+requires:
+  env:
+    - PEXO_API_KEY
+    - PEXO_BASE_URL
+  runtime:
+    - curl
+    - jq
+    - file
 metadata:
   author: pexoai
   version: "0.2.0"
 ---
 
-# Pexo Video
+# Pexo Agent
 
 Pexo is an AI video creation agent. You interact with Pexo through conversation — describe what you want, share reference materials if you have them, and Pexo handles the creative production. During the process, Pexo may ask clarifying questions, propose creative directions, and present previews for your feedback. Output: short videos (5–60 s), aspect ratios 16:9 / 9:16 / 1:1.
 
