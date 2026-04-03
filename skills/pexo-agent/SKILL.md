@@ -16,7 +16,7 @@ requires:
     - curl
     - jq
     - file
-version: "0.3.7"
+version: "0.3.8"
 metadata:
   author: pexoai
 ---
