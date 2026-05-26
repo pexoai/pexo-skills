@@ -40,15 +40,18 @@ jobs:
             gh pr create \
               --repo ComposioHQ/awesome-claude-skills \
               --title "Add pexoai/pexo-skills: content creation skills (image, audio, video)" \
-              --body "Adding pexo-skills, a collection of content creation skills for OpenClaw/Claude Code:
+              --body "$(cat <<'PRBODY'
+Adding pexo-skills, a collection of content creation skills for OpenClaw/Claude Code:
 
 - **image-studio**: Generate images with 8 AI models (Midjourney, Flux, Ideogram, etc.) — zero API key setup
 - **audiomind**: TTS, music generation, sound effects, and voice cloning — one API key for all
 - **seedance-prompter**: Expert prompt engineering for Seedance 2.0 video generation
 
 GitHub: https://github.com/pexoai/pexo-skills
-ClaWHub: https://clawhub.ai/pexoai" \
-              || echo "⚠️  PR may already exist"
+ClawHub: https://clawhub.ai/pexoai
+PRBODY
+)" \
+              || echo "PR may already exist"
           else
             echo "ℹ️  Entry already exists in awesome-claude-skills"
           fi
