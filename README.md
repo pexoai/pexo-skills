@@ -69,7 +69,7 @@ Most video generation skills for Claude Code wrap a single model and return a ra
 
 | | **Pexo** | **Single-model skills** | **Generic wrappers** |
 |---|---|---|---|
-| Models | 10+ (Seedance 2, Kling 3.0, Veo 3.1, Sora 2, MiniMax, Hunyuan, PixVerse) | 1 | 2–3 |
+| Models | 10+ (Seedance 2, Kling 3.0, HappyHorse, and more) | 1 | 2–3 |
 | Auto model selection | Yes — routes per shot by content type | No | No |
 | Input types | 5 (text, image, URL, script, audio) | 1–2 | 1–2 |
 | Output | Finished multi-shot video with music, subtitles, transitions | Raw clip | Raw clip |
@@ -136,7 +136,7 @@ For when you want direct control — pick the model, set the parameters, get a s
 
 ## Supported Models
 
-**Video** — Seedance 2, Kling 3.0, Veo 3.1, Sora 2, MiniMax, Hunyuan, PixVerse, Grok
+**Video** — Seedance 2, Kling 3.0, HappyHorse, and more, Grok
 
 **Image** — Midjourney, Flux, Ideogram, Recraft, Gemini
 
