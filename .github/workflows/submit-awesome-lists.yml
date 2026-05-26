@@ -37,20 +37,19 @@ jobs:
             git commit -m "Add pexoai/pexo-skills - content creation skills collection"
             git push origin add-pexoai-pexo-skills
             
+            PR_BODY="Adding pexo-skills, a collection of content creation skills for OpenClaw/Claude Code:
+
+            - image-studio: Generate images with 8 AI models (Midjourney, Flux, Ideogram, etc.)
+            - audiomind: TTS, music generation, sound effects, and voice cloning
+            - seedance-prompter: Expert prompt engineering for Seedance 2.0 video generation
+
+            GitHub: https://github.com/pexoai/pexo-skills
+            ClawHub: https://clawhub.ai/pexoai"
+
             gh pr create \
               --repo ComposioHQ/awesome-claude-skills \
               --title "Add pexoai/pexo-skills: content creation skills (image, audio, video)" \
-              --body "$(cat <<'PRBODY'
-Adding pexo-skills, a collection of content creation skills for OpenClaw/Claude Code:
-
-- **image-studio**: Generate images with 8 AI models (Midjourney, Flux, Ideogram, etc.) — zero API key setup
-- **audiomind**: TTS, music generation, sound effects, and voice cloning — one API key for all
-- **seedance-prompter**: Expert prompt engineering for Seedance 2.0 video generation
-
-GitHub: https://github.com/pexoai/pexo-skills
-ClawHub: https://clawhub.ai/pexoai
-PRBODY
-)" \
+              --body "$PR_BODY" \
               || echo "PR may already exist"
           else
             echo "ℹ️  Entry already exists in awesome-claude-skills"
