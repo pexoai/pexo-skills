@@ -1,0 +1,47 @@
+{
+  "name": "pexo",
+  "version": "0.3.12",
+  "description": "AI video generation with automatic model selection — describe what you want and Pexo picks the best model across 10+ engines (Seedance, Kling, Veo, Sora, and more), writes the prompts, generates every shot, and returns a finished, multi-shot video with music, subtitles, and transitions.",
+  "author": {
+    "name": "Pexo",
+    "email": "support@pexo.ai",
+    "url": "https://pexo.ai"
+  },
+  "homepage": "https://pexo.ai",
+  "repository": "https://github.com/pexoai/pexo-skills",
+  "license": "MIT",
+  "keywords": [
+    "video",
+    "ai-video",
+    "video-generation",
+    "text-to-video",
+    "image-to-video",
+    "auto-model-selection",
+    "seedance",
+    "kling",
+    "veo",
+    "sora",
+    "tiktok-video",
+    "product-ad",
+    "ugc-video",
+    "explainer-video",
+    "multi-shot-video"
+  ],
+  "skills": "./skills",
+  "interface": {
+    "displayName": "Pexo",
+    "shortDescription": "Finished AI videos with automatic model selection",
+    "longDescription": "Pexo turns a coding agent into a full video production studio. Describe what you want — Pexo selects the best model for each shot across 10+ engines, writes the prompts, generates every asset, and assembles a finished, publish-ready video with music, subtitles, transitions, and lip sync. Accepts text, images, URLs, scripts, or audio. No prompt engineering, no model picking, no editing. A 15-second 3-shot product ad renders in under 8 minutes.",
+    "developerName": "Pexo",
+    "category": "Design",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://pexo.ai",
+    "defaultPrompt": [
+      "Make a 15-second product ad from this photo",
+      "Turn this script into a narrated explainer video",
+      "Create a vertical TikTok video from these images",
+      "Make a 30-second brand video with music"
+    ],
+    "brandColor": "#6378FD"
+  }
+}

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Pexo product & API
+    url: https://pexo.ai
+    about: Account, credits, API keys, and product questions.
+  - name: Pexo docs
+    url: https://pexo.ai/connect/openclaw
+    about: Setup and integration guides.

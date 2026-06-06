@@ -1,42 +1,28 @@
 {
-  "metadata": {
-    "pluginRoot": "./skills"
+  "name": "pexo",
+  "owner": {
+    "name": "Pexo",
+    "url": "https://pexo.ai"
   },
-  "skills": [
+  "metadata": {
+    "description": "AI video generation skills with automatic model selection across 10+ engines.",
+    "version": "0.3.12"
+  },
+  "plugins": [
     {
-      "name": "videoagent-image-studio",
-      "source": "./skills/videoagent-image-studio",
-      "description": "Generate images with 8 AI models (Midjourney, Flux, Ideogram, and more). Zero API keys needed.",
+      "name": "pexo",
+      "description": "AI video generation — describe what you want, Pexo picks the best model across 10+ engines (Seedance, Kling, Veo, Sora) and returns a finished, multi-shot video with music, subtitles, and transitions. Includes the Pexo agent plus image, audio, director, and model-prompting skills.",
+      "source": "./",
       "strict": false,
-      "skills": ["./"]
-    },
-    {
-      "name": "videoagent-audio-studio",
-      "source": "./skills/videoagent-audio-studio",
-      "description": "TTS, music, sound effects, and voice cloning — all in one skill.",
-      "strict": false,
-      "skills": ["./"]
-    },
-    {
-      "name": "videoagent-video-studio",
-      "source": "./skills/videoagent-video-studio",
-      "description": "Text-to-video, image-to-video, and reference-to-video with 7 AI models. Zero API keys.",
-      "strict": false,
-      "skills": ["./"]
-    },
-    {
-      "name": "seedance-2.0-prompter",
-      "source": "./skills/seedance-2.0-prompter",
-      "description": "Expert prompt engineering for Seedance 2.0 video generation.",
-      "strict": false,
-      "skills": ["./"]
-    },
-    {
-      "name": "videoagent-director",
-      "source": "./skills/videoagent-director",
-      "description": "AI creative director — plans a storyboard from your concept and generates images, video clips, and audio shot by shot.",
-      "strict": false,
-      "skills": ["./"]
+      "skills": [
+        "./skills/pexo-agent",
+        "./skills/videoagent-video-studio",
+        "./skills/videoagent-image-studio",
+        "./skills/videoagent-audio-studio",
+        "./skills/videoagent-director",
+        "./skills/seedance-2.0-prompter",
+        "./skills/veo-3.2-prompter"
+      ]
     }
   ]
 }

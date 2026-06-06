@@ -1,0 +1,39 @@
+{
+  "$schema": "https://cursor.com/schemas/cursor-plugin/plugin.json",
+  "name": "pexo",
+  "displayName": "Pexo",
+  "version": "0.3.12",
+  "description": "AI video generation with automatic model selection — describe what you want and Pexo returns a finished, multi-shot video with music, subtitles, and transitions. Text, images, URLs, scripts, or audio in; publish-ready video out.",
+  "author": {
+    "name": "Pexo",
+    "email": "support@pexo.ai"
+  },
+  "publisher": "Pexo",
+  "homepage": "https://pexo.ai",
+  "repository": "https://github.com/pexoai/pexo-skills",
+  "license": "MIT",
+  "category": "developer-tools",
+  "keywords": [
+    "video",
+    "ai-video",
+    "video-generation",
+    "text-to-video",
+    "image-to-video",
+    "auto-model-selection",
+    "seedance",
+    "kling",
+    "veo",
+    "tiktok-video",
+    "product-ad"
+  ],
+  "tags": ["video", "ai", "generation", "creative", "marketing", "tiktok"],
+  "skills": [
+    "./skills/pexo-agent/",
+    "./skills/videoagent-video-studio/",
+    "./skills/videoagent-image-studio/",
+    "./skills/videoagent-audio-studio/",
+    "./skills/videoagent-director/",
+    "./skills/seedance-2.0-prompter/",
+    "./skills/veo-3.2-prompter/"
+  ]
+}
