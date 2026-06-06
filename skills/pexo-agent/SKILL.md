@@ -1,5 +1,5 @@
 ---
-name: pexoai-agent
+name: pexo-agent
 description: >
   AI video generation skill with auto model selection across Seedance 2,
   Kling 3.0, HappyHorse, and 10+ models. Produces finished multi-shot videos
