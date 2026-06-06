@@ -47,7 +47,7 @@ jobs:
             fi
             
             # 2. Has description >= 20 chars (20 pts)
-            desc=$(awk '/^---/{if(found) exit; found=1; next} found && /^description:/{found2=1; next} found2 && /^[a-z]/{exit} found2{print}' "$skill_file" | tr -d '\n' | xargs)
+            desc=$(awk '/^---/{if(found) exit; found=1; next} found && /^description:/{found2=1; next} found2 && /^[a-z]/{exit} found2{print}' "$skill_file" | tr -d '\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
             if [ ${#desc} -ge 20 ]; then
               SCORE=$((SCORE + 20))
               echo "  ✅ Description length: ${#desc} chars"

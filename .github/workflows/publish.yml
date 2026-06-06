@@ -58,7 +58,7 @@ jobs:
             fi
             
             # Check description length (>= 20 chars)
-            desc=$(echo "$frontmatter" | grep -A5 "^description:" | grep -v "^description:" | grep -v "^---" | tr -d '\n' | xargs)
+            desc=$(echo "$frontmatter" | grep -A5 "^description:" | grep -v "^description:" | grep -v "^---" | tr -d '\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
             if [ ${#desc} -lt 20 ]; then
               echo "⚠️  $skill_name: description too short (${#desc} chars, minimum 20)"
             fi
