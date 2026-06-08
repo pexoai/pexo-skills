@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/pexoai/pexo-skills/stargazers"><img src="https://img.shields.io/github/stars/pexoai/pexo-skills?style=flat" alt="GitHub stars"></a>
   <a href="#supported-models"><img src="https://img.shields.io/badge/video_models-10+-brightgreen?style=flat" alt="10+ models"></a>
-  <a href="#skills"><img src="https://img.shields.io/badge/skills-7-blue?style=flat" alt="7 skills"></a>
+  <a href="#skills"><img src="https://img.shields.io/badge/skills-16-blue?style=flat" alt="16 skills"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/pexoai/pexo-skills?style=flat" alt="License"></a>
 </p>
 
@@ -92,7 +92,7 @@ Most video generation skills for Claude Code wrap a single model and return a ra
 
 ## Skills
 
-Seven skills, three levels of control. Every skill works standalone — no dependencies between them.
+A general agent, scenario-specific shortcuts, and lower-level creative and studio skills. Every skill works standalone — no dependencies between them.
 
 ### Agent
 
@@ -101,6 +101,24 @@ For when you want the finished result without managing any part of the pipeline.
 | Skill | Description |
 |-------|-------------|
 | [pexo-agent](skills/pexo-agent/) | Full video production agent. Conversation to script to storyboard to render to music to subtitles to export. Auto model selection across 10+ models. 5–120 second videos in 16:9, 9:16, or 1:1. |
+
+### Scenario skills
+
+Prefer a skill named for the exact job? These are focused entry points to the same Pexo agent — install only the one that matches your task. `pexo-agent` does all of it; these are shortcuts.
+
+| Skill | For |
+|-------|-----|
+| [text-to-video](skills/text-to-video/) | A finished video from a text prompt or script |
+| [image-to-video](skills/image-to-video/) | Animate a still image into a moving video |
+| [make-a-video](skills/make-a-video/) | A complete video from a plain-language idea |
+| [video-ad](skills/video-ad/) | A scroll-stopping video ad from a product or brief |
+| [tiktok-video-ad](skills/tiktok-video-ad/) | A native, vertical TikTok ad |
+| [youtube-short-maker](skills/youtube-short-maker/) | A vertical, hook-first YouTube Short |
+| [product-video](skills/product-video/) | A product video from photos or a store URL |
+| [explainer-video](skills/explainer-video/) | A narrated explainer with shot-by-shot visuals |
+| [ai-video-generation](skills/ai-video-generation/) | AI video from text, image, or script |
+
+Install any of them the same way — just change the skill name: `npx skills add https://github.com/pexoai/pexo-skills --skill <name>`.
 
 ### Creative
 
@@ -133,6 +151,8 @@ For when you want direct control — pick the model, set the parameters, get a s
 | A single image, any model | `videoagent-image-studio` | You pick the model |
 | A single video clip, any model | `videoagent-video-studio` | You pick the model |
 | Speech, music, or sound effects | `videoagent-audio-studio` | You pick the output |
+
+Or grab a [scenario skill](#scenario-skills) named for your exact task — the same automated agent, just a focused entry point.
 
 ## Supported Models
 
