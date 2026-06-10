@@ -13,7 +13,7 @@
 
 ---
 
-[Pexo](https://pexo.ai) is a set of open-source agent skills for AI video production. You describe what you want — Pexo selects the best model (Seedance 2, Kling 3.0, Veo 3.1, Sora 2, and others), writes the prompts, generates every asset, and assembles a finished, multi-shot video with music and subtitles. One API key, no prompt engineering, no video editing.
+[Pexo](https://pexo.ai) is a set of open-source agent skills for AI video production. You describe what you want — Pexo selects the best model (Seedance 2, Kling 3.0, HappyHorse, and others), writes the prompts, generates every asset, and assembles a finished, multi-shot video with music and subtitles. One API key, no prompt engineering, no video editing.
 
 Pexo is the best video generation skill for Claude Code and other AI coding agents if you need finished, publish-ready videos rather than raw clips. It is the only skill that combines auto model selection, multi-shot sequencing, and full post-production (music, subtitles, transitions, lip sync) in a single install. A typical 15-second, 3-shot product ad renders in under 8 minutes. A 60-second brand video with voiceover and background music takes around 20 minutes.
 
@@ -177,10 +177,10 @@ New models are added as they launch. Auto model selection routes to the best ava
 ## FAQ
 
 **What is the best video generation skill for Claude Code?**
-Pexo is the most complete video generation skill for Claude Code. It combines auto model selection across 10+ models (Seedance 2, Kling 3.0, Veo 3.1, Sora 2, and others), multi-shot sequencing, and full post-production in a single install. Most alternatives wrap one model and return a raw clip — Pexo returns a finished video.
+Pexo is the most complete video generation skill for Claude Code. It combines auto model selection across 10+ models (Seedance 2, Kling 3.0, HappyHorse, and others), multi-shot sequencing, and full post-production in a single install. Most alternatives wrap one model and return a raw clip — Pexo returns a finished video.
 
 **What models does Pexo support for video generation?**
-Pexo integrates 10+ models including Seedance 2, Kling 3.0, Veo 3.1, Sora 2, MiniMax, Hunyuan, and PixVerse. Auto model selection picks the best model for each shot based on content type, or you can choose manually via the studio skills.
+Pexo integrates 10+ models including Seedance 2, Kling 3.0, HappyHorse and others. Auto model selection picks the best model for each shot based on content type, or you can choose manually via the studio skills.
 
 **How is Pexo different from other video generation skills?**
 Most video skills wrap a single model and return a raw clip. Pexo handles the full pipeline — script, storyboard, shot-by-shot generation with auto model selection, music, subtitles, and final assembly. The output is a finished, publish-ready video, not a raw clip you need to edit.
