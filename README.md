@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/pexoai/pexo-skills/stargazers"><img src="https://img.shields.io/github/stars/pexoai/pexo-skills?style=flat" alt="GitHub stars"></a>
   <a href="#supported-models"><img src="https://img.shields.io/badge/video_models-10+-brightgreen?style=flat" alt="10+ models"></a>
-  <a href="#skills"><img src="https://img.shields.io/badge/skills-16-blue?style=flat" alt="16 skills"></a>
+  <a href="#skills"><img src="https://img.shields.io/badge/skills-20-blue?style=flat" alt="20 skills"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/pexoai/pexo-skills?style=flat" alt="License"></a>
 </p>
 
@@ -117,6 +117,10 @@ Prefer a skill named for the exact job? These are focused entry points to the sa
 | [product-video](skills/product-video/) | A product video from photos or a store URL |
 | [explainer-video](skills/explainer-video/) | A narrated explainer with shot-by-shot visuals |
 | [ai-video-generation](skills/ai-video-generation/) | AI video from text, image, or script |
+| [launch-video](skills/launch-video/) | A launch video for Product Hunt, your landing page, or launch day |
+| [startup-video](skills/startup-video/) | A brand or intro video for your startup |
+| [saas-video](skills/saas-video/) | A SaaS demo or explainer video |
+| [founder-video](skills/founder-video/) | A founder pitch or story video (great for solo founders) |
 
 Install any of them the same way — just change the skill name: `npx skills add https://github.com/pexoai/pexo-skills --skill <name>`.
 
