@@ -32,7 +32,7 @@ Browse all skills: [skills.sh/pexoai/pexo-skills](https://www.skills.sh/pexoai/p
 ### ClawHub
 
 ```bash
-openclaw skills install pexoai-agent
+openclaw skills install pexo-video-agent
 ```
 
 Browse on ClawHub: [clawhub.ai/rainer-liao/pexoai-agent](https://clawhub.ai/rainer-liao/pexoai-agent)
