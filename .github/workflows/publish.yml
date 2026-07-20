@@ -7,7 +7,15 @@ on:
   workflow_dispatch:        # Manual trigger
     inputs:
       skill:
-        description: 'Skill to publish (leave empty to publish all)'
+        description: 'Skill directory name to publish'
+        required: true
+        default: 'pexo-agent'
+      version:
+        description: 'Semver version (defaults to repository VERSION)'
+        required: false
+        default: ''
+      changelog:
+        description: 'Release notes for this skill version'
         required: false
         default: ''
 
@@ -96,23 +104,31 @@ jobs:
         run: npm install -g clawhub
 
       - name: Login to ClaWHub
-        run: clawhub auth login --token "$CLAWHUB_TOKEN"
+        run: clawhub login --token "$CLAWHUB_TOKEN"
 
       - name: Extract version from tag
         id: version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
           else
-            VERSION="manual-$(date +%Y%m%d%H%M%S)"
+            VERSION="$INPUT_VERSION"
+            if [ -z "$VERSION" ]; then
+              VERSION="$(cat VERSION)"
+            fi
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📦 Publishing version: $VERSION"
 
       - name: Publish all skills to ClaWHub
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          TARGET_SKILL: ${{ github.event.inputs.skill }}
+          RELEASE_CHANGELOG: ${{ github.event.inputs.changelog }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          TARGET_SKILL="${{ github.event.inputs.skill }}"
+          VERSION="$RELEASE_VERSION"
           
           for skill_dir in skills/*/; do
             skill_name=$(basename "$skill_dir")
@@ -127,14 +143,32 @@ jobs:
             if [ -z "$skill_version" ]; then
               skill_version="$VERSION"
             fi
+
+            clawhub_slug="$skill_name"
+            clawhub_name=""
+            if [ "$skill_name" = "pexo-agent" ]; then
+              clawhub_slug="pexo-video-agent"
+              clawhub_name="Pexo Video Agent"
+            fi
+
+            changelog="$RELEASE_CHANGELOG"
+            if [ -z "$changelog" ]; then
+              changelog="Release $skill_version"
+            fi
             
             echo "🚀 Publishing $skill_name v$skill_version to ClaWHub..."
             
-            clawhub publish "./$skill_dir" \
-              --slug "$skill_name" \
-              --version "$skill_version" \
-              --changelog "Automated release $skill_version" \
-              || echo "⚠️  Failed to publish $skill_name (may already exist at this version)"
+            publish_args=(
+              "./$skill_dir"
+              --slug "$clawhub_slug"
+              --version "$skill_version"
+              --changelog "$changelog"
+            )
+            if [ -n "$clawhub_name" ]; then
+              publish_args+=(--name "$clawhub_name")
+            fi
+
+            clawhub publish "${publish_args[@]}"
             
             echo "✅ $skill_name published"
           done
@@ -191,7 +225,11 @@ jobs:
           NOTES+="# Via ClaWHub\n"
           for skill_dir in skills/*/; do
             skill_name=$(basename "$skill_dir")
-            NOTES+="clawhub install pexoai/$skill_name\n"
+            if [ "$skill_name" = "pexo-agent" ]; then
+              NOTES+="clawhub install pexo-video-agent\n"
+            else
+              NOTES+="clawhub install $skill_name\n"
+            fi
           done
           NOTES+="\n# Via npx skills\n"
           NOTES+="npx skills add pexoai/pexo-skills\n"

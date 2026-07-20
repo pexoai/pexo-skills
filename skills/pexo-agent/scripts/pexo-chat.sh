@@ -4,13 +4,13 @@
 usage() {
   cat <<'EOF'
 Usage:
-  pexo-chat.sh <project_id> <message> [--choice <preview_asset_id>] [--timeout <seconds>]
+  pexo-chat.sh <project_id> <message> [--choice <preview_asset_id>] [--billing-confirmation-mode <mode>] [--timeout <seconds>]
   pexo-chat.sh -h | --help
 
 Description:
   Submit a message to an existing Pexo project.
-  This script submits the message asynchronously. It waits until the server
-  acknowledges the request, then exits.
+  This script does not keep the SSE stream open. It only waits until /api/chat
+  acknowledges the request by opening the stream, then it disconnects.
   If the message references uploaded assets, wrap each asset ID with one of:
     <original-image>asset_id</original-image>
     <original-video>asset_id</original-video>
@@ -19,6 +19,8 @@ Description:
 
 Options:
   --choice <id>     Send the selected preview asset ID as choices.preview_id
+  --billing-confirmation-mode <mode>
+                    Override this message's confirmation mode: always, threshold, or never
   --timeout <sec>   Wait time for SSE acknowledgement (default: 20)
 
 Returns:
@@ -37,10 +39,8 @@ Common errors:
   400  Invalid request body
   401  Invalid API key or auth failure
   404  Project not found
-  412  Project agent version incompatible, or account credits frozen / billing issue
-       Credit balance and a top-up link are printed to stderr automatically.
-  429  Project video limit reached, or insufficient credits to start production
-       Credit balance and a top-up link are printed to stderr automatically.
+  412  Project agent version incompatible
+  429  Project video limit reached
   500  Backend/internal failure
 EOF
 }
@@ -97,6 +97,7 @@ msg="$2"
 shift 2
 
 choice=""
+confirmation_mode_override=""
 timeout="${PEXO_CHAT_ACK_TIMEOUT:-20}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -108,6 +109,11 @@ while [[ $# -gt 0 ]]; do
     --timeout)
       [[ $# -ge 2 ]] || { echo 'Error: --timeout requires a value' >&2; exit 2; }
       timeout="$2"
+      shift 2
+      ;;
+    --billing-confirmation-mode)
+      [[ $# -ge 2 ]] || { echo 'Error: --billing-confirmation-mode requires a value' >&2; exit 2; }
+      confirmation_mode_override="$2"
       shift 2
       ;;
     -h|--help)
@@ -123,23 +129,48 @@ while [[ $# -gt 0 ]]; do
 done
 
 validate_message_asset_references "$msg" || exit 2
+confirmation_mode=$(pexo_resolve_billing_confirmation_mode "$confirmation_mode_override") || exit $?
 
 ts=$(date +%s000)
+project=$(pexo_get "/api/biz/projects/${pid}")
+execution_status=$(jq -r '.executionStatus // ""' <<<"$project")
+replacement_confirmation='null'
 
-if [[ -n "$choice" ]]; then
-  body=$(jq -nc --arg pid "$pid" --arg msg "$msg" --arg ts "$ts" --arg ch "$choice" \
-    '{project_id:$pid, timestamp:$ts, user_visible:true, native_inputs:{text:$msg}, choices:{preview_id:$ch}}')
-else
-  body=$(jq -nc --arg pid "$pid" --arg msg "$msg" --arg ts "$ts" \
-    '{project_id:$pid, timestamp:$ts, user_visible:true, native_inputs:{text:$msg}}')
+if [[ "$execution_status" == "CONFIRM_REQUIRED" ]]; then
+  pending=$(pexo_get_pending_billing_confirmation "$pid") || {
+    echo 'Error: project is waiting for billing confirmation, but the current confirmation event is not available yet. Retry shortly.' >&2
+    exit 1
+  }
+  replacement_confirmation=$(jq -c '{
+    decision: "cancel",
+    confirmation_id: .confirmation_id,
+    tool_call_ids: (.tool_call_ids // []),
+    items: [(.items // [])[] | {tool_name, tool_call_id}]
+  }' <<<"$pending")
 fi
 
-pexo_post_sse_ack "/api/chat" "$body" "$timeout" || {
-  if [[ "$PEXO_LAST_HTTP_CODE" == "429" || "$PEXO_LAST_HTTP_CODE" == "412" ]]; then
-    _pexo_credit_hint
-  fi
-  exit 1
-}
+body=$(jq -nc \
+  --arg pid "$pid" \
+  --arg msg "$msg" \
+  --arg ts "$ts" \
+  --arg ch "$choice" \
+  --arg mode "$confirmation_mode" \
+  --argjson replacement "$replacement_confirmation" '
+    {
+      project_id: $pid,
+      timestamp: $ts,
+      user_visible: true,
+      native_inputs: {text: $msg},
+      billing_confirmation_policy: {mode: $mode}
+    }
+    + (if $ch != "" then {choices: {preview_id: $ch}} else {} end)
+    + (if $replacement != null then {
+        action: "message",
+        billing_confirmation_response: $replacement
+      } else {} end)
+  ')
+
+pexo_post_sse_ack "/api/chat" "$body" "$timeout"
 
 jq -nc \
   --arg pid "$pid" \

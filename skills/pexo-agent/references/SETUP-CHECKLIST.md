@@ -1,17 +1,22 @@
 # Setup Checklist
 
-This guide covers first-time setup and environment diagnostics for the pexo-video skill.
+This guide covers first-time setup and environment diagnostics for the Pexo agent skill.
+
+Run bundled scripts through Bash from the skill directory, for example
+`bash scripts/pexo-doctor.sh`; installed files may not retain executable bits.
 
 ## Quick Start
 
 ### 1. Create config file
 
 ```bash
+umask 077
 mkdir -p ~/.pexo
 cat > ~/.pexo/config << 'EOF'
 PEXO_BASE_URL="https://pexo.ai"
 PEXO_API_KEY="sk-<your-api-key>"
 EOF
+chmod 600 ~/.pexo/config
 ```
 
 Get your API key at: https://pexo.ai
@@ -26,7 +31,7 @@ Get your API key at: https://pexo.ai
 ### 2. Run diagnostics
 
 ```bash
-pexo-doctor.sh
+bash scripts/pexo-doctor.sh
 ```
 
 This checks:
@@ -41,7 +46,7 @@ Fix any issues reported before using other scripts.
 ### 3. Verify
 
 ```bash
-pexo-project-list.sh
+bash scripts/pexo-project-list.sh
 ```
 
 If this returns a JSON list (even if empty), setup is complete.
@@ -86,8 +91,13 @@ If `pexo-doctor.sh` reports a connectivity issue:
 
 All scripts read `~/.pexo/config` automatically. You can also override via environment variables:
 
+Only `PEXO_*` assignments are accepted in the config file; it is parsed as data
+and is never executed as shell code. Explicit environment variables take
+precedence over values in the config file.
+
 | Variable | Description | Required |
 |---|---|---|
 | `PEXO_BASE_URL` | Pexo API base URL | Yes |
 | `PEXO_API_KEY` | Your Pexo API key (starts with `sk-`) | Yes |
 | `PEXO_CONFIG` | Custom path to config file (default: `~/.pexo/config`) | No |
+| `PEXO_BILLING_CONFIRMATION_MODE` | Default credit confirmation mode: `always`, `threshold`, or `never` (default: `threshold`) | No |

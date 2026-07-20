@@ -1,15 +1,147 @@
 #!/usr/bin/env bash
 # Shared configuration for Pexo scripts.
-# Sources ~/.pexo/config automatically; env vars override.
+# Parses ~/.pexo/config as data; explicit environment variables override it.
 # Agent scripts source this file -- no need to handle auth manually.
 set -euo pipefail
+umask 077
 
 _PEXO_CONFIG="${PEXO_CONFIG:-$HOME/.pexo/config}"
-[[ -f "$_PEXO_CONFIG" ]] && source "$_PEXO_CONFIG"
+
+_pexo_trim() {
+  local value="${1:-}"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "$value"
+}
+
+_pexo_set_config_default() {
+  local key="$1"
+  local value="$2"
+
+  case "$key" in
+    PEXO_BASE_URL)
+      [[ -n "${PEXO_BASE_URL+x}" ]] || export PEXO_BASE_URL="$value"
+      ;;
+    PEXO_API_KEY)
+      [[ -n "${PEXO_API_KEY+x}" ]] || export PEXO_API_KEY="$value"
+      ;;
+    PEXO_BILLING_CONFIRMATION_MODE)
+      [[ -n "${PEXO_BILLING_CONFIRMATION_MODE+x}" ]] || export PEXO_BILLING_CONFIRMATION_MODE="$value"
+      ;;
+    PEXO_CONNECT_TIMEOUT)
+      [[ -n "${PEXO_CONNECT_TIMEOUT+x}" ]] || export PEXO_CONNECT_TIMEOUT="$value"
+      ;;
+    PEXO_REQUEST_TIMEOUT)
+      [[ -n "${PEXO_REQUEST_TIMEOUT+x}" ]] || export PEXO_REQUEST_TIMEOUT="$value"
+      ;;
+    PEXO_CHAT_ACK_TIMEOUT)
+      [[ -n "${PEXO_CHAT_ACK_TIMEOUT+x}" ]] || export PEXO_CHAT_ACK_TIMEOUT="$value"
+      ;;
+    PEXO_TMP_DIR)
+      [[ -n "${PEXO_TMP_DIR+x}" ]] || export PEXO_TMP_DIR="$value"
+      ;;
+    PEXO_BILLING_CONFIRMATION_HISTORY_MAX_ATTEMPTS)
+      [[ -n "${PEXO_BILLING_CONFIRMATION_HISTORY_MAX_ATTEMPTS+x}" ]] || export PEXO_BILLING_CONFIRMATION_HISTORY_MAX_ATTEMPTS="$value"
+      ;;
+    PEXO_BILLING_CONFIRMATION_HISTORY_RETRY_DELAY)
+      [[ -n "${PEXO_BILLING_CONFIRMATION_HISTORY_RETRY_DELAY+x}" ]] || export PEXO_BILLING_CONFIRMATION_HISTORY_RETRY_DELAY="$value"
+      ;;
+    *)
+      printf 'Unsupported config key in %s: %s\n' "$_PEXO_CONFIG" "$key" >&2
+      return 2
+      ;;
+  esac
+}
+
+pexo_load_config() {
+  local config_file="$1"
+  local line line_number=0 key value first last
+
+  [[ -r "$config_file" ]] || return 0
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line_number=$((line_number + 1))
+    line=$(_pexo_trim "$line")
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    [[ "$line" == export[[:space:]]* ]] && line=$(_pexo_trim "${line#export}")
+
+    if [[ ! "$line" =~ ^(PEXO_[A-Z0-9_]+)[[:space:]]*=(.*)$ ]]; then
+      printf 'Invalid config syntax in %s at line %d\n' "$config_file" "$line_number" >&2
+      return 2
+    fi
+
+    key="${BASH_REMATCH[1]}"
+    value=$(_pexo_trim "${BASH_REMATCH[2]}")
+    if [[ -n "$value" ]]; then
+      first="${value:0:1}"
+      last="${value: -1}"
+      if [[ "$first" == '"' || "$first" == "'" ]]; then
+        if [[ "$last" != "$first" || ${#value} -lt 2 ]]; then
+          printf 'Unterminated quoted value in %s at line %d\n' "$config_file" "$line_number" >&2
+          return 2
+        fi
+        value="${value:1:${#value}-2}"
+      elif [[ "$value" == *'`'* || "$value" == *'$('* || "$value" == *';'* ]]; then
+        printf 'Unsafe unquoted value in %s at line %d\n' "$config_file" "$line_number" >&2
+        return 2
+      fi
+    fi
+
+    _pexo_set_config_default "$key" "$value"
+  done < "$config_file"
+}
+
+pexo_load_config "$_PEXO_CONFIG"
 
 PEXO_LAST_HTTP_CODE=0
 _PEXO_CONNECT_TIMEOUT="${PEXO_CONNECT_TIMEOUT:-10}"
 _PEXO_REQUEST_TIMEOUT="${PEXO_REQUEST_TIMEOUT:-60}"
+
+pexo_resolve_billing_confirmation_mode() {
+  local override="${1:-}"
+  local mode="${override:-${PEXO_BILLING_CONFIRMATION_MODE:-threshold}}"
+
+  case "$mode" in
+    always|threshold|never)
+      printf '%s\n' "$mode"
+      ;;
+    *)
+      printf 'Invalid billing confirmation mode: %s (expected always, threshold, or never)\n' "$mode" >&2
+      return 2
+      ;;
+  esac
+}
+
+pexo_extract_latest_billing_confirmation() {
+  local history="$1"
+  jq -cer '
+    (if type == "array" then . else (.messages // []) end) as $messages |
+    ($messages[0] // {}) as $latest |
+    select(($latest.content.event // $latest.eventType // "") == "billing_confirmation") |
+    ($latest.content.data // $latest.content // empty) |
+    select(type == "object" and (.confirmation_id // "") != "")
+  ' <<<"$history"
+}
+
+pexo_get_pending_billing_confirmation() {
+  local project_id="$1"
+  local max_attempts="${PEXO_BILLING_CONFIRMATION_HISTORY_MAX_ATTEMPTS:-4}"
+  local retry_delay="${PEXO_BILLING_CONFIRMATION_HISTORY_RETRY_DELAY:-1}"
+  local attempt history confirmation
+
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    history=$(pexo_get "/api/biz/projects/${project_id}/history?page=1&page_size=1&sort_order=DESC")
+    if confirmation=$(pexo_extract_latest_billing_confirmation "$history" 2>/dev/null); then
+      printf '%s\n' "$confirmation"
+      return 0
+    fi
+    if ((attempt < max_attempts)); then
+      sleep $((retry_delay * attempt))
+    fi
+  done
+
+  return 1
+}
 
 pexo_require_config() {
   local missing=()
@@ -36,6 +168,7 @@ _pexo_auth_header() {
 pexo_tmp_dir() {
   local tmp_dir="${PEXO_TMP_DIR:-$HOME/.pexo/tmp}"
   mkdir -p "$tmp_dir"
+  chmod 700 "$tmp_dir"
   printf '%s\n' "$tmp_dir"
 }
 
@@ -152,63 +285,6 @@ _pexo_emit_error() {
   return 1
 }
 
-_pexo_extract_sse_event_data() {
-  local response="${1:-}"
-  local target_event="${2:-error}"
-
-  awk -v target_event="$target_event" '
-    BEGIN {
-      in_event = 0
-      data = ""
-    }
-    /^event:[[:space:]]*/ {
-      current = $0
-      sub(/^event:[[:space:]]*/, "", current)
-      in_event = (current == target_event)
-      next
-    }
-    in_event && /^data:[[:space:]]*/ {
-      line = $0
-      sub(/^data:[[:space:]]*/, "", line)
-      if (data == "") {
-        data = line
-      } else {
-        data = data "\n" line
-      }
-      next
-    }
-    in_event && /^$/ {
-      print data
-      exit
-    }
-    END {
-      if (in_event && data != "") {
-        print data
-      }
-    }
-  ' <<<"$response"
-}
-
-_pexo_emit_sse_error() {
-  local payload="${1:-}"
-
-  if _pexo_is_json "$payload"; then
-    jq -c '
-      {
-        ok: false,
-        httpCode: 200,
-        message: (.error_message // .message // "request failed")
-      }
-      + (if (.error_code // "") != "" then {error: .error_code} else {} end)
-      + (if (.details // "") != "" then {details: .details} else {} end)
-      + (if (.hint // "") != "" then {hint: .hint} else {} end)
-    ' <<<"$payload" >&2
-    return 1
-  fi
-
-  _pexo_emit_error 200 "" "${payload:-SSE returned an error event}"
-}
-
 _pexo_request_json() {
   local method="$1"
   local path="$2"
@@ -270,38 +346,7 @@ _pexo_request_json() {
   rm -f "$body_file" "$header_file" "$err_file"
 }
 
-# _pexo_credit_hint: silently fetch the user's credit balance and emit a
-# diagnostic line + top-up URL to stderr.  Always returns 0 — never disrupts
-# the caller's exit path or overwrites PEXO_LAST_HTTP_CODE.
-_pexo_credit_hint() {
-  local _saved_code="${PEXO_LAST_HTTP_CODE:-0}"
-  local entitlements available
-  local topup_url="${PEXO_BASE_URL:-https://pexo.ai}/home"
-
-  # Run in a subshell so set -e / PEXO_LAST_HTTP_CODE side-effects stay isolated.
-  entitlements=$(
-    set +e
-    pexo_require_config 2>/dev/null || exit 0
-    _pexo_request_json GET "/api/biz/auth/entitlements" "" 2>/dev/null
-  ) || true
-
-  export PEXO_LAST_HTTP_CODE="$_saved_code"
-
-  [[ -n "$entitlements" ]] || return 0
-  available=$(printf '%s' "$entitlements" \
-    | jq -r '.credits.availableCredits // empty' 2>/dev/null) || true
-  [[ -n "$available" ]] || return 0
-
-  if [[ "$available" == "0" ]] || \
-     { [[ "$available" =~ ^[0-9]+$ ]] && [[ "$available" -le 0 ]]; }; then
-    printf 'Credits balance: 0 — your account has no available credits.\n' >&2
-  else
-    printf 'Credits balance: %s available.\n' "$available" >&2
-  fi
-  printf 'To purchase credits: visit %s → click Credits (top-right) → Buy Credits → Extra Credits\n' "$topup_url" >&2
-}
-
-# GET -> unwraps response envelope when present
+# GET -> extracts .data from BFF wrapper when present
 pexo_get() {
   local path="$1"
   shift || true
@@ -341,7 +386,7 @@ pexo_post_sse_ack() {
       -H "Accept: text/event-stream" \
       -D "$header_file" \
       -d "$body" \
-      "${PEXO_BASE_URL}${path}" >"$body_file" 2>"$err_file"
+      "${PEXO_BASE_URL}${path}" 2>"$err_file" | tee "$body_file" | sed '/^: stream opened$/q' >/dev/null
   else
     curl -sS -N \
       --connect-timeout "$_PEXO_CONNECT_TIMEOUT" \
@@ -351,7 +396,7 @@ pexo_post_sse_ack() {
       -H "Content-Type: application/json" \
       -H "Accept: text/event-stream" \
       -D "$header_file" \
-      "${PEXO_BASE_URL}${path}" >"$body_file" 2>"$err_file"
+      "${PEXO_BASE_URL}${path}" 2>"$err_file" | tee "$body_file" | sed '/^: stream opened$/q' >/dev/null
   fi
   set -o pipefail
 
@@ -362,14 +407,6 @@ pexo_post_sse_ack() {
 
   if [[ "${http_code:-0}" -ge 400 ]] 2>/dev/null; then
     _pexo_emit_error "$http_code" "$response" "$(cat "$err_file")"
-    rm -f "$body_file" "$header_file" "$err_file"
-    return 1
-  fi
-
-  local sse_error_payload
-  sse_error_payload=$(_pexo_extract_sse_event_data "$response" "error")
-  if [[ -n "$sse_error_payload" ]]; then
-    _pexo_emit_sse_error "$sse_error_payload"
     rm -f "$body_file" "$header_file" "$err_file"
     return 1
   fi

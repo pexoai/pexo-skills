@@ -20,7 +20,7 @@ Description:
   - required variables
   - local dependencies
   - network reachability
-  - API key/auth validity check
+  - API key/auth check against /api/biz/projects?page_size=1
 
 Notes:
   API keys are expected to use the sk- prefix.
@@ -60,6 +60,8 @@ case "${1:-}" in
     ;;
 esac
 
+source "$(dirname "$0")/_common.sh"
+
 PASS="✓"
 FAIL="✗"
 WARN="!"
@@ -73,7 +75,16 @@ config_path="${PEXO_CONFIG:-$HOME/.pexo/config}"
 # 1. Config file
 if [[ -f "$config_path" ]]; then
   echo "$PASS Config file found: $config_path"
-  source "$config_path"
+  config_mode=$(stat -f '%Lp' "$config_path" 2>/dev/null || stat -c '%a' "$config_path" 2>/dev/null || echo unknown)
+  if [[ "$config_mode" == "unknown" ]]; then
+    echo "$WARN Could not determine config file permissions"
+  elif [[ "${config_mode: -2}" != "00" ]]; then
+    echo "$FAIL Config file is accessible by group or other users (mode $config_mode)"
+    echo "  Fix with: chmod 600 $config_path"
+    errors=$((errors + 1))
+  else
+    echo "$PASS Config file permissions are owner-only (mode $config_mode)"
+  fi
 else
   echo "$FAIL Config file not found: $config_path"
   echo "  Create it with:"
@@ -92,12 +103,23 @@ else
   errors=$((errors + 1))
 fi
 
+confirmation_mode="${PEXO_BILLING_CONFIRMATION_MODE:-threshold}"
+case "$confirmation_mode" in
+  always|threshold|never)
+    echo "$PASS Billing confirmation mode: $confirmation_mode"
+    ;;
+  *)
+    echo "$FAIL PEXO_BILLING_CONFIRMATION_MODE must be always, threshold, or never"
+    errors=$((errors + 1))
+    ;;
+esac
+
 if [[ -n "${PEXO_API_KEY:-}" ]]; then
   masked=$(mask_secret "$PEXO_API_KEY")
   echo "$PASS PEXO_API_KEY is set: $masked"
   if [[ "$PEXO_API_KEY" != sk-* ]]; then
     echo "$WARN PEXO_API_KEY does not start with sk-"
-    echo "  API keys are expected to start with sk-."
+    echo "  The current frontend API key validator recognizes keys with the sk- prefix."
   fi
 else
   echo "$FAIL PEXO_API_KEY is not set"
@@ -165,7 +187,7 @@ if [[ -n "${PEXO_BASE_URL:-}" && -n "${PEXO_API_KEY:-}" ]]; then
       errors=$((errors + 1))
     elif [[ "$auth_error" == "INTERNAL_ERROR" ]]; then
       echo "$WARN API check returned HTTP 401 with INTERNAL_ERROR"
-      echo "  This is a temporary service issue, not a problem with the API key. Wait and retry."
+      echo "  This usually means the BFF/proxy failed before auth completed."
       echo "  Message: $message"
     else
       echo "$FAIL API check returned HTTP 401"
