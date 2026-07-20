@@ -19,14 +19,6 @@ Fields you may see:
 - `message`: the most useful user-facing message extracted from the response
 - `details`: extra backend detail when available
 
-When the error is credit-related (`httpCode` 429 or 412 from `pexo-project-create.sh` or `pexo-chat.sh`), the script automatically fetches the user's credit balance and appends two extra lines to stderr:
-
-```
-Credits balance: 0 — your account has no available credits.
-To purchase credits: visit https://pexo.ai/home → click Credits (top-right) → Buy Credits → Extra Credits
-```
-
-
 ## Auth And Proxy Errors
 
 These can happen on every script that makes API calls:
@@ -52,7 +44,7 @@ Real statuses:
 - `429`: creation limit reached — could be any of:
   - User already has an active project running (must wait for it to finish)
   - Insufficient credits to start a new project
-  The script automatically fetches and prints the credit balance + top-up URL after any `429`.
+  Read the error `message` to distinguish these cases. The script does not query the balance automatically.
 - `500`: an unexpected server error occurred. Retry in a moment; if the problem persists, contact support at pexo.ai.
 
 Notes:
@@ -84,6 +76,10 @@ Subsequent status fetches can also fail with:
 - `401`: auth failure — see Auth and Proxy Errors above.
 - `404`: project not found. Same action as above.
 - `500`: an unexpected server error occurred. Retry in a moment; if the problem persists, contact support at pexo.ai.
+
+`nextAction=CONFIRM` is a successful status response. The output includes a `confirmation` object for the current pending batch. Use its `confirmation_id` only after obtaining explicit user approval.
+
+`nextAction=FAILED` can include `failureReason=INSUFFICIENT_CREDITS`. In that case, `recentMessages` retains the terminal error with `errorCode=credits.insufficient_credits_err`. This polling result is the authoritative way to detect an insufficient-credit failure that occurs after `pexo-chat.sh` has acknowledged an asynchronous submission.
 
 ### `pexo-upload.sh`
 
@@ -135,36 +131,30 @@ Real statuses:
 - `404`: the project does not exist or has been deleted. Start a new project.
 - `412`: two possible causes:
   - **Project no longer supported**: this project was created with an older version of Pexo's production system and cannot be continued. Start a new project.
-  - **Account billing issue**: the account's credits are frozen or suspended. The script automatically fetches and prints the credit balance + top-up URL. Direct the user to top up or contact support at pexo.ai.
-- `429`: limit reached — could be insufficient credits or the project's video output limit. The script automatically fetches and prints the credit balance + top-up URL after a `429`.
+  - **Account billing issue**: the account's credits are frozen or suspended. Read the response `message`, then direct the user to top up or contact support at pexo.ai.
+- `429`: limit reached — could be insufficient credits or the project's video output limit. Read the response `message` to distinguish the cause.
 - `500`: an unexpected server error occurred. Retry in a moment; if the problem persists, contact support at pexo.ai.
-
-Business errors (credit-related):
-
-- `error=”credits.insufficient_credits_err”`: account has no available credits. `pexo-chat.sh` exits non-zero and prints compact JSON to `stderr`, for example:
-
-```json
-{“ok”:false,”httpCode”:200,”message”:”Insufficient credits”,”error”:”credits.insufficient_credits_err”}
-```
 
 Notes:
 
 - `pexo-chat.sh` is asynchronous. Success means the request was accepted, not that the video is done.
-- For non-auth failures, use the HTTP status code as the primary signal. The automatically-appended credit balance lines are the most actionable hint.
+- The script stops reading the SSE stream after `: stream opened`. A business error emitted later in that stream is not returned by `pexo-chat.sh`.
+- Synchronous HTTP failures are printed as compact JSON to `stderr`. Use the HTTP status and response `message` to classify them.
 - A successful `pexo-chat.sh` call should be followed by `pexo-project-get.sh` polling, typically every `60` seconds.
+- If the asynchronous run later fails for insufficient credits, `pexo-project-get.sh` returns `nextAction=FAILED`, `failureReason=INSUFFICIENT_CREDITS`, and the matching error in `recentMessages`.
+- When a project is waiting for credit approval, sending a new message through `pexo-chat.sh` cancels that pending confirmation and submits the replacement message.
 
-### `pexo-entitlements.sh`
+### `pexo-billing-confirm.sh`
 
-Real statuses:
+This command approves a pending billable batch. It must only be called after explicit user approval.
 
-- `401`: auth failure — see Auth and Proxy Errors above.
-- `500`: an unexpected server error occurred. Retry in a moment; if the problem persists, contact support at pexo.ai.
+Local validation failures:
 
-Notes:
-
-- Returns JSON with `credits.availableCredits`, `credits.subscriptionCredits`, `credits.bonusCredits`, `credits.purchaseCredits`, and plan info.
-- When `availableCredits` is `0`, the top-up URL is also printed to stderr.
-- You generally do not need to call this script manually — `pexo-project-create.sh` and `pexo-chat.sh` call it automatically on `429`/`412` failures and include the balance in their error output.
+- The project is not in `CONFIRM_REQUIRED`: fetch the project again and follow its current `nextAction`.
+- The supplied `confirmation_id` does not match the latest confirmation: use the current `confirmation.confirmation_id` returned by `pexo-project-get.sh`.
+- The confirmation event is temporarily unavailable in history: poll again shortly; the event may still be persisting.
+- `sufficient` is `false`: the available balance cannot cover the batch. Direct the user to purchase credits and do not submit approval.
+- The confirmation mode is missing or invalid: fetch the current confirmation again; do not construct an approval request manually.
 
 ### `pexo-asset-get.sh`
 
@@ -195,25 +185,17 @@ Notes:
 
 ## Common Scenarios
 
-### Insufficient credits — `429` or `412` with credit balance printed
+### Synchronous `429` or `412` from project creation or chat submission
 
-When `pexo-project-create.sh` or `pexo-chat.sh` fails with `429` or `412`, the script automatically fetches the credit balance and appends:
+These scripts print the HTTP failure as compact JSON to `stderr`. They do not query or append the current credit balance. Read both `httpCode` and `message` before choosing an action because these statuses also represent non-credit limits and compatibility failures.
 
-```
-Credits balance: 0 — your account has no available credits.
-To purchase credits: visit https://pexo.ai/home → click Credits (top-right) → Buy Credits → Extra Credits
-```
+If the response identifies insufficient or suspended credits:
 
-If `availableCredits` is `0`:
+1. Explain the credit restriction to the user.
+2. Direct them to `https://pexo.ai/home?billing=credits` and have them complete the purchase flow.
+3. Do not retry until the user confirms that credits have been added or the suspension has been resolved.
 
-- Explain to the user that they have run out of credits.
-- Guide them to purchase credits: visit https://pexo.ai/home, click Credits in the top-right corner → Buy Credits, then find Extra Credits.
-- Do NOT retry the failed operation — it will fail again until credits are added.
-
-If `availableCredits` is non-zero but the error still appears:
-
-- The `429` is likely the concurrent-project limit: the user already has an active project running.
-- Re-read the `message` field from the error JSON to confirm, then tell the user to wait for the current project to finish before creating a new one.
+For a concurrent-project limit, video output limit, or incompatible project, follow the response `message` instead of using the credit remediation.
 
 ### `pexo-chat.sh` returns success immediately
 
@@ -221,6 +203,7 @@ This is expected.
 
 The script only confirms that the request was accepted by the server, then exits.
 It does not stream progress or final results to the terminal.
+It also does not return business errors emitted after the SSE acknowledgement.
 
 Next step:
 
@@ -228,17 +211,29 @@ Next step:
 2. Run `pexo-project-get.sh <project_id>`.
 3. Follow `nextAction`.
 
-### `pexo-chat.sh` prints `credits.insufficient_credits_err`
+### `nextAction=FAILED` with `failureReason=INSUFFICIENT_CREDITS`
 
 Meaning:
 
-- The account has no available credits.
+- Production started but stopped when a billable operation found that the account did not have enough credits.
+- The matching error details are retained in `recentMessages` with `event: "error"`.
 
 Action:
 
-1. Tell the user the account has no available credits for this chat request.
-2. Direct them to top up credits at `https://pexo.ai/home`.
-3. Do not retry `pexo-chat.sh` until credits are added; it will fail again with the same error.
+1. Tell the user prominently that production stopped because the account has insufficient credits.
+2. Direct them to top up credits at `https://pexo.ai/home?billing=credits`.
+3. Do not retry until the user confirms that credits have been added.
+4. Use `recentMessages[].errorMessage` for additional detail when needed; use `failureReason`, not free-form hint text, to select this remediation.
+
+### `nextAction=CONFIRM`
+
+The project is waiting for a decision on a billable generation batch.
+
+1. Read `confirmation.estimated_credits`, `confirmation.available_credits`, and `confirmation.sufficient`.
+2. If `sufficient` is `true`, explain the estimate and ask the user for explicit approval.
+3. After approval, run `pexo-billing-confirm.sh <project_id> <confirmation_id>`, then resume polling.
+4. If `sufficient` is `false`, direct the user to purchase credits. Do not submit approval.
+5. If the user changes the request, send the revised message with `pexo-chat.sh`; this cancels the pending confirmation.
 
 ### `WAIT` lasts a long time
 

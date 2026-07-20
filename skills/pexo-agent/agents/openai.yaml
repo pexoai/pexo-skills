@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pexo Video Agent"
+  short_description: "Create finished multi-shot AI videos"
+  default_prompt: "Use $pexo-agent to create a finished video from my brief and assets."

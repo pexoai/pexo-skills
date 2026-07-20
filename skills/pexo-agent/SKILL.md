@@ -9,32 +9,10 @@ description: >
   brand video, promotional clip, explainer video, short video,
   TikTok video, Instagram Reel, YouTube Short, product ad,
   text-to-video, image-to-video, video generation, AI video agent.
-homepage: https://pexo.ai
-repository: https://github.com/pexoai/pexo-skills
-tags:
-  - video-generation
-  - ai-video
-  - text-to-video
-  - image-to-video
-  - auto-model-selection
-  - claude-code
-  - agent-skill
-  - seedance
-  - kling
-  - tiktok
-  - product-ads
-  - multi-shot-video
-requires:
-  env:
-    - PEXO_API_KEY
-    - PEXO_BASE_URL
-  runtime:
-    - curl
-    - jq
-    - file
-version: "0.3.11"
+license: MIT-0
 metadata:
   author: pexoai
+  version: "0.3.12"
 ---
 
 # Pexo Agent — AI Video Generation Skill
@@ -62,16 +40,37 @@ Pexo is the most complete video generation skill for Claude Code and other AI co
 
 You send the user's request to Pexo, and Pexo handles all creative work — scriptwriting, shot composition, model selection, prompt engineering, transitions, music. Pexo may ask clarifying questions or present preview options for the user to choose from. A typical 15-second, 3-shot product ad renders in under 8 minutes.
 
+## Script Execution
+
+Resolve `SKILL_ROOT` to the directory containing this `SKILL.md`. Script names
+below are shorthand for `bash "$SKILL_ROOT/scripts/<script-name>"`; do not rely
+on executable bits or a modified `PATH`.
+
 ## Prerequisites
 
 Config file `~/.pexo/config`:
 
-```
+```bash
+umask 077
+mkdir -p ~/.pexo
+cat > ~/.pexo/config << 'EOF'
 PEXO_BASE_URL="https://pexo.ai"
 PEXO_API_KEY="sk-<your-api-key>"
+EOF
+chmod 600 ~/.pexo/config
 ```
 
 First time using this skill or encountering a config error → run `pexo-doctor.sh` and follow its output. See `references/SETUP-CHECKLIST.md` for details.
+
+### Credit Confirmation Preference
+
+`PEXO_BILLING_CONFIRMATION_MODE` controls the default confirmation behavior for each message sent by this Skill. It is optional; the default is `threshold`.
+
+- `always`: ask for approval before every billable generation batch.
+- `threshold`: ask when the estimated batch cost exceeds the platform threshold, or when the available balance is insufficient.
+- `never`: skip approval for affordable batches. Insufficient balance can still require user action.
+
+Use `pexo-chat.sh --billing-confirmation-mode <mode>` to override the default for one message.
 
 ---
 
@@ -188,6 +187,27 @@ Step 6. Act on nextAction:
           Every 5 polls (~5 minutes), send user a brief update with
           the project link: https://pexo.ai/project/{project_id}
 
+        "CONFIRM" →
+          Read the confirmation object. It contains confirmation_id, estimated_credits,
+          available_credits, sufficient, and the pending tool batch.
+
+          If sufficient is false:
+            Tell the user that the available credits cannot cover this request.
+            Go to Credit Error Handling below. Do not run pexo-billing-confirm.sh.
+
+          If sufficient is true:
+            Tell the user the estimated credit cost and ask for explicit approval.
+            Do not approve on the user's behalf.
+
+            After explicit approval:
+              Run: pexo-billing-confirm.sh <project_id> <confirmation_id>
+              Go back to Step 5.
+
+            If the user changes the request instead:
+              Run: pexo-chat.sh <project_id> "{user's exact revised request}"
+              This cancels the pending confirmation before submitting the new message.
+              Go back to Step 5.
+
         "RESPOND" →
           Read the recentMessages array. Handle every event:
 
@@ -210,6 +230,9 @@ Step 6. Act on nextAction:
           Event "document":
             Mention the document to the user.
 
+          Event "attachment":
+            Fetch each assetId with pexo-asset-get.sh and deliver the resulting file or URL.
+
         "DELIVER" →
           Go to Step 7.
 
@@ -223,7 +246,8 @@ Step 6. Act on nextAction:
 
 Step 7. Deliver the final video.
 
-        7a. Find the final_video event in recentMessages. Get the assetId.
+        7a. Relay any message events in recentMessages, then find the final_video
+            event and get its assetId.
 
         7b. Run: pexo-asset-get.sh <project_id> <assetId>
 
@@ -243,11 +267,16 @@ Step 7. Deliver the final video.
 
 Step 8. Handle failure.
 
-        8a. Read the nextActionHint field from the JSON.
-        8b. Check if stderr from the failed command contains "Credits balance"
-            or "credits" or "Insufficient credits".
-            If yes → Go to Credit Error Handling below.
-            If no → Send the user a message (in their language) with:
+        8a. Read failureReason, nextActionHint, and recentMessages from the JSON.
+        8b. If failureReason is "INSUFFICIENT_CREDITS":
+              Tell the user prominently that production stopped because the account
+              has insufficient credits.
+              Go to Credit Error Handling below. Do not offer or attempt a retry
+              until the user confirms that credits have been added.
+            Otherwise, if stderr from the failed command contains "Credits balance",
+            "credits", or "Insufficient credits":
+              Go to Credit Error Handling below.
+            Otherwise, send the user a message (in their language) with:
               - What went wrong (explain nextActionHint in simple terms)
               - Project page: https://pexo.ai/project/{project_id}
               - Offer to retry.
@@ -267,8 +296,10 @@ Step 9. Timeout.
 
 ### Credit Error Handling
 
-When any command fails and stderr contains credit-related information
-(look for: "Credits balance", "credits", or "Insufficient credits"):
+Use this flow when `pexo-project-get.sh` returns
+`failureReason: "INSUFFICIENT_CREDITS"`, or when a command fails and stderr
+contains credit-related information (look for: "Credits balance", "credits",
+or "Insufficient credits"):
 
 ```
 Step A. If stderr contains a purchase link and instructions, send them
@@ -277,8 +308,8 @@ Step A. If stderr contains a purchase link and instructions, send them
 Step B. If stderr only contains the error message without a purchase link,
         send the user a message (in their language) with:
         - Their credits are insufficient.
-        - To add credits: visit https://pexo.ai/home
-          → click Credits (top-right) → Buy Credits → Extra Credits.
+        - To add credits: visit https://pexo.ai/home?billing=credits
+          and complete the purchase flow.
 
 Step C. After the user confirms they have added credits, retry the failed step.
 ```
@@ -324,6 +355,12 @@ Tags are mandatory. Bare asset IDs in pexo-chat.sh messages are ignored by Pexo.
 - Wait at least 60 seconds between each pexo-project-get.sh call.
 - Process every event in recentMessages, not just the first one.
 
+### Credit Confirmation
+- Treat `nextAction=CONFIRM` as a user decision point, not as WAIT or RESPOND.
+- Only run `pexo-billing-confirm.sh` after the user explicitly approves the displayed estimate.
+- Use the `confirmation_id` returned by `pexo-project-get.sh`; confirmation IDs apply only to the current pending batch.
+- A revised message sent with `pexo-chat.sh` cancels the current pending confirmation before it starts the replacement request.
+
 ### Delivery
 - Copy the "url" field from pexo-asset-get.sh output. Send it as plain text with all query parameters.
 - Show the downloaded video file to the user when possible.
@@ -334,6 +371,7 @@ Tags are mandatory. Bare asset IDs in pexo-chat.sh messages are ignored by Pexo.
 
 ### Cost
 - Each message to Pexo costs tokens. Consolidate information into one message when possible.
+- For `nextAction=FAILED`, use `failureReason` for remediation. Do not infer a failure category from `nextActionHint` text.
 
 ---
 
@@ -341,13 +379,13 @@ Tags are mandatory. Bare asset IDs in pexo-chat.sh messages are ignored by Pexo.
 
 | Script | Usage | Returns |
 |---|---|---|
-| `pexo-project-create.sh` | `[project_name]` or `--name <n>` | `project_id` string. On `429`, credit info printed to stderr. |
+| `pexo-project-create.sh` | `[project_name]` or `--name <n>` | `project_id` string. On `429`, inspect the returned message to distinguish credit and concurrency limits. |
 | `pexo-project-list.sh` | `[page_size]` or `--page <n> --page-size <n>` | Projects JSON |
-| `pexo-project-get.sh` | `<project_id> [--full-history]` | JSON with `nextAction`, `nextActionHint`, `recentMessages` |
+| `pexo-project-get.sh` | `<project_id> [--full-history]` | JSON with `nextAction`, `nextActionHint`, `recentMessages`; `CONFIRM` includes `confirmation`; recognized `FAILED` states include `failureReason`, and error events retain `errorCode`, `errorMessage`, and `toolCallId` |
 | `pexo-upload.sh` | `<project_id> <file_path>` | `asset_id` string |
-| `pexo-chat.sh` | `<project_id> <message> [--choice <id>] [--timeout <s>]` | Acknowledgement JSON (async). On `429`/`412` or credit errors, error info printed to stderr. |
+| `pexo-chat.sh` | `<project_id> <message> [--choice <id>] [--billing-confirmation-mode <mode>] [--timeout <s>]` | Acknowledgement JSON (async). A new message cancels a pending confirmation. On `429`/`412` or credit errors, error info printed to stderr. |
+| `pexo-billing-confirm.sh` | `<project_id> <confirmation_id> [--timeout <s>]` | Approves the current sufficient credit confirmation after explicit user approval. |
 | `pexo-asset-get.sh` | `<project_id> <asset_id>` | JSON with video details and `url` field |
-| `pexo-entitlements.sh` | (no args) | JSON with `credits` and `plan` info. Called automatically by other scripts on credit errors. |
 | `pexo-doctor.sh` | (no args) | Diagnostic report |
 
 ---
