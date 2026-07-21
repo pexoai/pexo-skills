@@ -12,10 +12,13 @@ Run bundled scripts through Bash from the skill directory, for example
 ```bash
 umask 077
 mkdir -p ~/.pexo
-cat > ~/.pexo/config << 'EOF'
-PEXO_BASE_URL="https://pexo.ai"
-PEXO_API_KEY="sk-<your-api-key>"
-EOF
+read -rsp "Pexo API key: " pexo_api_key
+printf '\n'
+{
+  printf '%s=%s\n' PEXO_BASE_URL https://pexo.ai
+  printf '%s=%s\n' PEXO_API_KEY "$pexo_api_key"
+} > ~/.pexo/config
+unset pexo_api_key
 chmod 600 ~/.pexo/config
 ```
 
@@ -100,4 +103,4 @@ precedence over values in the config file.
 | `PEXO_BASE_URL` | Pexo API base URL | Yes |
 | `PEXO_API_KEY` | Your Pexo API key (starts with `sk-`) | Yes |
 | `PEXO_CONFIG` | Custom path to config file (default: `~/.pexo/config`) | No |
-| `PEXO_BILLING_CONFIRMATION_MODE` | Default credit confirmation mode: `always`, `threshold`, or `never` (default: `threshold`) | No |
+| `PEXO_BILLING_CONFIRMATION_MODE` | Credit confirmation mode: `always` or `threshold` (default: `always`; use `threshold` only after explicit user opt-in) | No |

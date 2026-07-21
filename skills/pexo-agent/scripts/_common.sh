@@ -99,14 +99,14 @@ _PEXO_REQUEST_TIMEOUT="${PEXO_REQUEST_TIMEOUT:-60}"
 
 pexo_resolve_billing_confirmation_mode() {
   local override="${1:-}"
-  local mode="${override:-${PEXO_BILLING_CONFIRMATION_MODE:-threshold}}"
+  local mode="${override:-${PEXO_BILLING_CONFIRMATION_MODE:-always}}"
 
   case "$mode" in
-    always|threshold|never)
+    always|threshold)
       printf '%s\n' "$mode"
       ;;
     *)
-      printf 'Invalid billing confirmation mode: %s (expected always, threshold, or never)\n' "$mode" >&2
+      printf 'Invalid billing confirmation mode: %s (expected always or threshold)\n' "$mode" >&2
       return 2
       ;;
   esac

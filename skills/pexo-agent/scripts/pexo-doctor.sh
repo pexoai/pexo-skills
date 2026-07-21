@@ -87,11 +87,8 @@ if [[ -f "$config_path" ]]; then
   fi
 else
   echo "$FAIL Config file not found: $config_path"
-  echo "  Create it with:"
-  echo '  mkdir -p ~/.pexo && cat > ~/.pexo/config << EOF'
-  echo '  PEXO_BASE_URL="https://pexo.ai"'
-  echo '  PEXO_API_KEY="sk-<your-api-key>"'
-  echo '  EOF'
+  echo "  Create an owner-only config with PEXO_BASE_URL and the API key copied from https://pexo.ai."
+  echo "  Follow references/SETUP-CHECKLIST.md; it reads the key without echoing it."
   errors=$((errors + 1))
 fi
 
@@ -103,13 +100,13 @@ else
   errors=$((errors + 1))
 fi
 
-confirmation_mode="${PEXO_BILLING_CONFIRMATION_MODE:-threshold}"
+confirmation_mode="${PEXO_BILLING_CONFIRMATION_MODE:-always}"
 case "$confirmation_mode" in
-  always|threshold|never)
+  always|threshold)
     echo "$PASS Billing confirmation mode: $confirmation_mode"
     ;;
   *)
-    echo "$FAIL PEXO_BILLING_CONFIRMATION_MODE must be always, threshold, or never"
+    echo "$FAIL PEXO_BILLING_CONFIRMATION_MODE must be always or threshold"
     errors=$((errors + 1))
     ;;
 esac
