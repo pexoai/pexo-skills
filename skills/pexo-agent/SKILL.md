@@ -6,8 +6,9 @@ description: >
   (5–120s) from text, images, URLs, scripts, or audio — including AI music,
   lip sync, and multi-shot sequencing. Calls Pexo's external API, manages
   project status and billing confirmations, and transfers only user-approved
-  briefs and assets. Requires shell, outbound HTTPS, and local file access.
-  No prompts to write, no models to choose.
+  briefs and assets. Runs setup diagnostics, stores generated downloads locally,
+  and requires shell, outbound HTTPS, and local file access. Authenticated
+  requests are locked to https://pexo.ai. No prompts to write, no models to choose.
   USE FOR: video production, AI video, make a video, product video,
   brand video, promotional clip, explainer video, short video,
   TikTok video, Instagram Reel, YouTube Short, product ad,
@@ -15,7 +16,7 @@ description: >
 license: MIT-0
 metadata:
   author: pexoai
-  version: "0.3.13"
+  version: "0.3.14"
 ---
 
 # Pexo Agent — AI Video Generation Skill
@@ -46,8 +47,9 @@ You send the user's request to Pexo, and Pexo handles all creative work — scri
 ## Data, Permissions, and Cost
 
 - This Skill runs bundled shell scripts, reads only files the user explicitly selects,
-  connects to `https://pexo.ai` over HTTPS, uploads approved briefs and assets, and
-  downloads generated media.
+  connects only to `https://pexo.ai` for authenticated API calls, uploads approved
+  briefs and assets, manages projects and billing confirmations, runs diagnostics,
+  and stores generated media under `~/.pexo/tmp` or `PEXO_TMP_DIR`.
 - Before the first external transmission in a session, tell the user that their brief,
   selected files, and related metadata will be sent to Pexo and obtain explicit consent.
 - Do not upload secrets, regulated data, or unrelated local files. Never search the local
@@ -71,7 +73,6 @@ mkdir -p ~/.pexo
 read -rsp "Pexo API key: " pexo_api_key
 printf '\n'
 {
-  printf '%s=%s\n' PEXO_BASE_URL https://pexo.ai
   printf '%s=%s\n' PEXO_API_KEY "$pexo_api_key"
 } > ~/.pexo/config
 unset pexo_api_key
@@ -343,7 +344,13 @@ Step 3. Go to Step 5 of the main workflow (start polling).
 
 ## Asset Upload
 
-Pexo cannot crawl web URLs. If the user provides a link to a file, download it first, then upload.
+Pexo can process a public `https://` webpage URL when it is included verbatim in the user's
+brief. Pass that webpage URL to Pexo; do not scrape or download the page locally.
+
+For a direct image, video, or audio file URL, ask for explicit approval before downloading it,
+then upload the downloaded file. Only fetch public `https://` URLs. Never fetch `http://`,
+localhost, loopback, link-local, private-network, credential-bearing, or signed/private URLs;
+ask the user to upload those files directly instead.
 
 Upload and reference workflow:
 ```bash

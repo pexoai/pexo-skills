@@ -87,18 +87,13 @@ if [[ -f "$config_path" ]]; then
   fi
 else
   echo "$FAIL Config file not found: $config_path"
-  echo "  Create an owner-only config with PEXO_BASE_URL and the API key copied from https://pexo.ai."
+  echo "  Create an owner-only config with the API key copied from https://pexo.ai."
   echo "  Follow references/SETUP-CHECKLIST.md; it reads the key without echoing it."
   errors=$((errors + 1))
 fi
 
 # 2. Required variables
-if [[ -n "${PEXO_BASE_URL:-}" ]]; then
-  echo "$PASS PEXO_BASE_URL is set: $PEXO_BASE_URL"
-else
-  echo "$FAIL PEXO_BASE_URL is not set"
-  errors=$((errors + 1))
-fi
+echo "$PASS Authenticated API origin is locked to: $PEXO_BASE_URL"
 
 confirmation_mode="${PEXO_BILLING_CONFIRMATION_MODE:-always}"
 case "$confirmation_mode" in

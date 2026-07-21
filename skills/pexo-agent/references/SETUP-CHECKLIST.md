@@ -15,7 +15,6 @@ mkdir -p ~/.pexo
 read -rsp "Pexo API key: " pexo_api_key
 printf '\n'
 {
-  printf '%s=%s\n' PEXO_BASE_URL https://pexo.ai
   printf '%s=%s\n' PEXO_API_KEY "$pexo_api_key"
 } > ~/.pexo/config
 unset pexo_api_key
@@ -33,6 +32,11 @@ Get your API key at: https://pexo.ai
 
 ### 2. Run diagnostics
 
+The next command makes outbound HTTPS requests only to `https://pexo.ai`. It performs
+an unauthenticated connectivity check and, when an API key is configured, an authenticated
+project-list request to validate access. Pexo may log these requests; they do not start a
+generation or consume generation credits. Run it only after the user approves this check.
+
 ```bash
 bash scripts/pexo-doctor.sh
 ```
@@ -48,6 +52,9 @@ Fix any issues reported before using other scripts.
 
 ### 3. Verify
 
+The next command sends an authenticated project-list request to `https://pexo.ai` and may
+appear in Pexo service logs. It does not create a project or consume generation credits.
+
 ```bash
 bash scripts/pexo-project-list.sh
 ```
@@ -56,9 +63,10 @@ If this returns a JSON list (even if empty), setup is complete.
 
 ## Troubleshooting Setup Issues
 
-### "Set PEXO_BASE_URL in ~/.pexo/config or env"
+### "PEXO_BASE_URL must be exactly https://pexo.ai"
 
-Config file is missing or doesn't contain the required variables. Create it per step 1 above.
+Authenticated requests are restricted to the production Pexo origin. Remove any custom base
+URL override, or set it to exactly `https://pexo.ai`.
 
 ### "Set PEXO_API_KEY in ~/.pexo/config or env"
 
@@ -100,7 +108,7 @@ precedence over values in the config file.
 
 | Variable | Description | Required |
 |---|---|---|
-| `PEXO_BASE_URL` | Pexo API base URL | Yes |
+| `PEXO_BASE_URL` | Optional compatibility override; if set, must be exactly `https://pexo.ai` | No |
 | `PEXO_API_KEY` | Your Pexo API key (starts with `sk-`) | Yes |
 | `PEXO_CONFIG` | Custom path to config file (default: `~/.pexo/config`) | No |
 | `PEXO_BILLING_CONFIRMATION_MODE` | Credit confirmation mode: `always` or `threshold` (default: `always`; use `threshold` only after explicit user opt-in) | No |
