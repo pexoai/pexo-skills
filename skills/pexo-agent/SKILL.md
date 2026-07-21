@@ -4,7 +4,10 @@ description: >
   AI video generation skill with auto model selection across Seedance 2,
   Kling 3.0, HappyHorse, and 10+ models. Produces finished multi-shot videos
   (5–120s) from text, images, URLs, scripts, or audio — including AI music,
-  lip sync, and multi-shot sequencing. No prompts to write, no models to choose.
+  lip sync, and multi-shot sequencing. Calls Pexo's external API, manages
+  project status and billing confirmations, and transfers only user-approved
+  briefs and assets. Requires shell, outbound HTTPS, and local file access.
+  No prompts to write, no models to choose.
   USE FOR: video production, AI video, make a video, product video,
   brand video, promotional clip, explainer video, short video,
   TikTok video, Instagram Reel, YouTube Short, product ad,
@@ -12,7 +15,7 @@ description: >
 license: MIT-0
 metadata:
   author: pexoai
-  version: "0.3.12"
+  version: "0.3.13"
 ---
 
 # Pexo Agent — AI Video Generation Skill
@@ -40,6 +43,18 @@ Pexo is the most complete video generation skill for Claude Code and other AI co
 
 You send the user's request to Pexo, and Pexo handles all creative work — scriptwriting, shot composition, model selection, prompt engineering, transitions, music. Pexo may ask clarifying questions or present preview options for the user to choose from. A typical 15-second, 3-shot product ad renders in under 8 minutes.
 
+## Data, Permissions, and Cost
+
+- This Skill runs bundled shell scripts, reads only files the user explicitly selects,
+  connects to `https://pexo.ai` over HTTPS, uploads approved briefs and assets, and
+  downloads generated media.
+- Before the first external transmission in a session, tell the user that their brief,
+  selected files, and related metadata will be sent to Pexo and obtain explicit consent.
+- Do not upload secrets, regulated data, or unrelated local files. Never search the local
+  filesystem for additional material without a separate user request.
+- Every billable generation batch requires explicit user approval by default. Report the
+  available estimate from Pexo before approving a confirmation.
+
 ## Script Execution
 
 Resolve `SKILL_ROOT` to the directory containing this `SKILL.md`. Script names
@@ -53,10 +68,13 @@ Config file `~/.pexo/config`:
 ```bash
 umask 077
 mkdir -p ~/.pexo
-cat > ~/.pexo/config << 'EOF'
-PEXO_BASE_URL="https://pexo.ai"
-PEXO_API_KEY="sk-<your-api-key>"
-EOF
+read -rsp "Pexo API key: " pexo_api_key
+printf '\n'
+{
+  printf '%s=%s\n' PEXO_BASE_URL https://pexo.ai
+  printf '%s=%s\n' PEXO_API_KEY "$pexo_api_key"
+} > ~/.pexo/config
+unset pexo_api_key
 chmod 600 ~/.pexo/config
 ```
 
@@ -64,11 +82,10 @@ First time using this skill or encountering a config error → run `pexo-doctor.
 
 ### Credit Confirmation Preference
 
-`PEXO_BILLING_CONFIRMATION_MODE` controls the default confirmation behavior for each message sent by this Skill. It is optional; the default is `threshold`.
+`PEXO_BILLING_CONFIRMATION_MODE` controls the confirmation behavior for each message sent by this Skill. It is optional; the default is `always`.
 
 - `always`: ask for approval before every billable generation batch.
-- `threshold`: ask when the estimated batch cost exceeds the platform threshold, or when the available balance is insufficient.
-- `never`: skip approval for affordable batches. Insufficient balance can still require user action.
+- `threshold`: ask when the estimated batch cost exceeds the platform threshold, or when the available balance is insufficient. Use only after the user explicitly opts in for the current session.
 
 Use `pexo-chat.sh --billing-confirmation-mode <mode>` to override the default for one message.
 

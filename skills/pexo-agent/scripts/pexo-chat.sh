@@ -20,7 +20,7 @@ Description:
 Options:
   --choice <id>     Send the selected preview asset ID as choices.preview_id
   --billing-confirmation-mode <mode>
-                    Override this message's confirmation mode: always, threshold, or never
+                    Override this message's confirmation mode: always or threshold
   --timeout <sec>   Wait time for SSE acknowledgement (default: 20)
 
 Returns:
