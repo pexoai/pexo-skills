@@ -4,14 +4,16 @@
 usage() {
   cat <<'EOF'
 Usage:
-  pexo-billing-confirm.sh <project_id> <confirmation_id> [--timeout <seconds>]
+  pexo-billing-confirm.sh <project_id> <confirmation_id> --user-approved [--timeout <seconds>]
   pexo-billing-confirm.sh -h | --help
 
 Description:
   Continue the current credit-gated tool batch after explicit user approval.
   The confirmation ID must match the project's latest billing confirmation.
+  --user-approved records that the displayed estimate was approved by the user.
 
 Options:
+  --user-approved  Required assertion of prior explicit user approval
   --timeout <sec>   Wait time for SSE acknowledgement (default: 20)
 EOF
 }
@@ -34,9 +36,14 @@ pid="$1"
 confirmation_id="$2"
 shift 2
 timeout="${PEXO_CHAT_ACK_TIMEOUT:-20}"
+user_approved=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --user-approved)
+      user_approved=true
+      shift
+      ;;
     --timeout)
       [[ $# -ge 2 ]] || { echo 'Error: --timeout requires a value' >&2; exit 2; }
       timeout="$2"
@@ -53,6 +60,11 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ "$user_approved" != "true" ]]; then
+  echo 'Error: --user-approved is required after the user approves the displayed credit estimate.' >&2
+  exit 2
+fi
 
 project=$(pexo_get "/api/biz/projects/${pid}")
 execution_status=$(jq -r '.executionStatus // ""' <<<"$project")
@@ -95,7 +107,7 @@ body=$(jq -nc \
       action: "billing_confirm",
       project_id: $pid,
       timestamp: $ts,
-      user_visible: false,
+      user_visible: true,
       billing_confirmation_response: {
         decision: "approve",
         confirmation_id: $confirmation_id
@@ -104,6 +116,8 @@ body=$(jq -nc \
     }
   ')
 
+printf 'Submitting user-approved billing confirmation for project %s and confirmation %s.\n' \
+  "$pid" "$confirmation_id" >&2
 pexo_post_sse_ack "/api/chat" "$body" "$timeout"
 
 jq -nc --arg pid "$pid" --arg confirmation_id "$confirmation_id" '{

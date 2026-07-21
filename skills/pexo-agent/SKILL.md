@@ -16,7 +16,17 @@ description: >
 license: MIT-0
 metadata:
   author: pexoai
-  version: "0.3.14"
+  version: "0.3.15"
+  openclaw:
+    requires:
+      env:
+        - PEXO_API_KEY
+      bins:
+        - bash
+        - curl
+        - jq
+        - file
+    primaryEnv: PEXO_API_KEY
 ---
 
 # Pexo Agent — AI Video Generation Skill
@@ -218,7 +228,7 @@ Step 6. Act on nextAction:
             Do not approve on the user's behalf.
 
             After explicit approval:
-              Run: pexo-billing-confirm.sh <project_id> <confirmation_id>
+              Run: pexo-billing-confirm.sh <project_id> <confirmation_id> --user-approved
               Go back to Step 5.
 
             If the user changes the request instead:
@@ -381,7 +391,9 @@ Tags are mandatory. Bare asset IDs in pexo-chat.sh messages are ignored by Pexo.
 
 ### Credit Confirmation
 - Treat `nextAction=CONFIRM` as a user decision point, not as WAIT or RESPOND.
-- Only run `pexo-billing-confirm.sh` after the user explicitly approves the displayed estimate.
+- Only run `pexo-billing-confirm.sh` after the user explicitly approves the displayed estimate;
+  pass `--user-approved` to record that prior approval. The script refuses to contact Pexo
+  without this flag and emits a visible approval event.
 - Use the `confirmation_id` returned by `pexo-project-get.sh`; confirmation IDs apply only to the current pending batch.
 - A revised message sent with `pexo-chat.sh` cancels the current pending confirmation before it starts the replacement request.
 
@@ -408,7 +420,7 @@ Tags are mandatory. Bare asset IDs in pexo-chat.sh messages are ignored by Pexo.
 | `pexo-project-get.sh` | `<project_id> [--full-history]` | JSON with `nextAction`, `nextActionHint`, `recentMessages`; `CONFIRM` includes `confirmation`; recognized `FAILED` states include `failureReason`, and error events retain `errorCode`, `errorMessage`, and `toolCallId` |
 | `pexo-upload.sh` | `<project_id> <file_path>` | `asset_id` string |
 | `pexo-chat.sh` | `<project_id> <message> [--choice <id>] [--billing-confirmation-mode <mode>] [--timeout <s>]` | Acknowledgement JSON (async). A new message cancels a pending confirmation. On `429`/`412` or credit errors, error info printed to stderr. |
-| `pexo-billing-confirm.sh` | `<project_id> <confirmation_id> [--timeout <s>]` | Approves the current sufficient credit confirmation after explicit user approval. |
+| `pexo-billing-confirm.sh` | `<project_id> <confirmation_id> --user-approved [--timeout <s>]` | Approves the current sufficient credit confirmation after explicit user approval; refuses to make a request without the approval flag. |
 | `pexo-asset-get.sh` | `<project_id> <asset_id>` | JSON with video details and `url` field |
 | `pexo-doctor.sh` | (no args) | Diagnostic report |
 

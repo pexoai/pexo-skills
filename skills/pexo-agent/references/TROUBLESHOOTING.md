@@ -146,7 +146,8 @@ Notes:
 
 ### `pexo-billing-confirm.sh`
 
-This command approves a pending billable batch. It must only be called after explicit user approval.
+This command approves a pending billable batch. It must only be called after explicit user approval
+and requires the `--user-approved` flag. Without that flag it exits before making a network request.
 
 Local validation failures:
 
@@ -231,7 +232,7 @@ The project is waiting for a decision on a billable generation batch.
 
 1. Read `confirmation.estimated_credits`, `confirmation.available_credits`, and `confirmation.sufficient`.
 2. If `sufficient` is `true`, explain the estimate and ask the user for explicit approval.
-3. After approval, run `pexo-billing-confirm.sh <project_id> <confirmation_id>`, then resume polling.
+3. After approval, run `pexo-billing-confirm.sh <project_id> <confirmation_id> --user-approved`, then resume polling.
 4. If `sufficient` is `false`, direct the user to purchase credits. Do not submit approval.
 5. If the user changes the request, send the revised message with `pexo-chat.sh`; this cancels the pending confirmation.
 

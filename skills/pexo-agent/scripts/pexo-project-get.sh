@@ -161,7 +161,7 @@ elif [[ "$exec_status" == "INTERRUPTED" ]]; then
 elif [[ "$exec_status" == "CONFIRM_REQUIRED" ]]; then
   if confirmation=$(pexo_get_pending_billing_confirmation "$pid"); then
     next_action="CONFIRM"
-    hint="Pexo is waiting for credit approval. Ask the user and call pexo-billing-confirm.sh only after explicit approval."
+    hint="Pexo is waiting for credit approval. Ask the user and call pexo-billing-confirm.sh with --user-approved only after explicit approval."
   else
     next_action="WAIT"
     hint="Credit confirmation is being persisted. Poll again shortly."
