@@ -227,7 +227,7 @@ skill-name/
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=pexoai/pexo-skills&type=Date)](https://star-history.com/#pexoai/pexo-skills&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=pexoai/pexo-skills&type=Date)](https://star-history.dera.page/#pexoai/pexo-skills&Date)
 
 ---
 
