@@ -16,7 +16,7 @@ description: >
 license: MIT-0
 metadata:
   author: pexoai
-  version: "0.3.15"
+  version: "0.3.16"
   openclaw:
     requires:
       env:
@@ -277,11 +277,21 @@ Step 7. Deliver the final video.
         7a. Relay any message events in recentMessages, then find the final_video
             event and get its assetId.
 
-        7b. Run: pexo-asset-get.sh <project_id> <assetId>
+        7b. Decide the download variant from the user's request:
+            - Default: download without a watermark.
+            - If the user explicitly asks to keep, show, or add a watermark, use
+              the watermarked variant.
+            - Both variants require an active subscription or watermark whitelist.
 
-        7c. Show the downloaded video file to the user.
+        7c. Run one of:
+            - pexo-asset-get.sh <project_id> <assetId>
+              (default, no watermark)
+            - pexo-asset-get.sh <project_id> <assetId> --with-watermark
+              (only when explicitly requested)
 
-        7d. Also send the user a message (in their language) with:
+        7d. Show the downloaded video file to the user.
+
+        7e. Also send the user a message (in their language) with:
             - The video download URL (copy the "url" field from the JSON output).
               Send the FULL URL as plain text, including all query parameters.
               Example:
@@ -399,6 +409,8 @@ Tags are mandatory. Bare asset IDs in pexo-chat.sh messages are ignored by Pexo.
 
 ### Delivery
 - Copy the "url" field from pexo-asset-get.sh output. Send it as plain text with all query parameters.
+- Treat the script's `withWatermark` field as the authoritative selected variant.
+- Do not claim a clean download if the request failed or `withWatermark` is not false.
 - Show the downloaded video file to the user when possible.
 
 ### Projects
@@ -421,7 +433,7 @@ Tags are mandatory. Bare asset IDs in pexo-chat.sh messages are ignored by Pexo.
 | `pexo-upload.sh` | `<project_id> <file_path>` | `asset_id` string |
 | `pexo-chat.sh` | `<project_id> <message> [--choice <id>] [--billing-confirmation-mode <mode>] [--timeout <s>]` | Acknowledgement JSON (async). A new message cancels a pending confirmation. On `429`/`412` or credit errors, error info printed to stderr. |
 | `pexo-billing-confirm.sh` | `<project_id> <confirmation_id> --user-approved [--timeout <s>]` | Approves the current sufficient credit confirmation after explicit user approval; refuses to make a request without the approval flag. |
-| `pexo-asset-get.sh` | `<project_id> <asset_id>` | JSON with video details and `url` field |
+| `pexo-asset-get.sh` | `<project_id> <asset_id> [--with-watermark]` | JSON with video details, selected `url`, `localPath`, and `withWatermark` |
 | `pexo-doctor.sh` | (no args) | Diagnostic report |
 
 ---
