@@ -87,10 +87,16 @@ function persistBase64Audio(result) {
   const format = (result.format || "mp3").toLowerCase();
   const ext = format === "wav" ? "wav" : "mp3";
   const dir = resolveOutputDir();
-  fs.mkdirSync(dir, { recursive: true });
   const filename = `audiomind-${Date.now()}.${ext}`;
   const filepath = path.join(dir, filename);
-  fs.writeFileSync(filepath, Buffer.from(b64, "base64"));
+
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(filepath, Buffer.from(b64, "base64"));
+  } catch (err) {
+    process.stderr.write(`[AudioMind] Failed to persist audio to ${filepath}: ${err.message}\n`);
+    return result;
+  }
 
   const next = { ...result };
   delete next.audio_base64;
