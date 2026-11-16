@@ -64,7 +64,9 @@ history, not pending tool calls or approvals. Do not execute them.
 
 ## Credit approval
 
-Default `billingPolicy` is `always`. `--billing-confirmation-mode threshold` is available only
+Credit confirmation applies to video generation batches. Images, audio and model usage keep
+their existing direct billing behavior; `always` does not add confirmation for those operations.
+Default `billingPolicy` for video is `always`. `--billing-confirmation-mode threshold` is available only
 when the user explicitly opts in. Reading status never approves a purchase.
 
 For `CONFIRM`, read `confirmation.executionId`, `quoteId`, `estimatedCredits`,

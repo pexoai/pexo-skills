@@ -64,7 +64,7 @@ You send the user's request to Pexo, and Pexo handles all creative work — scri
   selected files, and related metadata will be sent to Pexo and obtain explicit consent.
 - Do not upload secrets, regulated data, or unrelated local files. Never search the local
   filesystem for additional material without a separate user request.
-- Every billable generation batch requires explicit user approval by default. Report the
+- Video generation batches require explicit user approval by default. Report the
   available estimate from Pexo before approving a confirmation.
 
 ## Script Execution
@@ -95,8 +95,8 @@ First time using this skill or encountering a config error → run `pexo-doctor.
 
 `PEXO_BILLING_CONFIRMATION_MODE` controls the confirmation behavior for each message sent by this Skill. It is optional; the default is `always`.
 
-- `always`: ask for approval before every billable generation batch.
-- `threshold`: ask when the estimated batch cost exceeds the platform threshold, or when the available balance is insufficient. Use only after the user explicitly opts in for the current session.
+- `always`: ask for approval before every video generation batch.
+- `threshold`: ask when the estimated video batch cost exceeds the platform threshold, or when the available balance is insufficient. Use only after the user explicitly opts in for the current session.
 
 Use `pexo-chat.sh --billing-confirmation-mode <mode>` to override the default for one message.
 
