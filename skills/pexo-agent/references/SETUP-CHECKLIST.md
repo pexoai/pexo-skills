@@ -63,10 +63,10 @@ If this returns a JSON list (even if empty), setup is complete.
 
 ## Troubleshooting Setup Issues
 
-### "PEXO_BASE_URL must be exactly https://pexo.ai"
+### Unsupported Pexo API origin
 
-Authenticated requests are restricted to the production Pexo origin. Remove any custom base
-URL override, or set it to exactly `https://pexo.ai`.
+Only `https://pexo.ai` and `https://test2.pexo.ai` are accepted. Set test2 explicitly for this
+native-client branch; use a key created in that environment. See `API.md` for rollout compatibility.
 
 ### "Set PEXO_API_KEY in ~/.pexo/config or env"
 
@@ -108,7 +108,7 @@ precedence over values in the config file.
 
 | Variable | Description | Required |
 |---|---|---|
-| `PEXO_BASE_URL` | Optional compatibility override; if set, must be exactly `https://pexo.ai` | No |
+| `PEXO_BASE_URL` | API origin: `https://pexo.ai` (default) or `https://test2.pexo.ai` | No |
 | `PEXO_API_KEY` | Your Pexo API key (starts with `sk-`) | Yes |
 | `PEXO_CONFIG` | Custom path to config file (default: `~/.pexo/config`) | No |
 | `PEXO_BILLING_CONFIRMATION_MODE` | Credit confirmation mode: `always` or `threshold` (default: `always`; use `threshold` only after explicit user opt-in) | No |

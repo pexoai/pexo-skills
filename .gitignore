@@ -3,3 +3,5 @@ node_modules/
 .vercel/
 **/scripts/server.log
 .private-infra/
+
+__pycache__/
