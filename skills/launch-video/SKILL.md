@@ -43,38 +43,18 @@ PEXO_API_KEY="sk-<your-api-key>"
 
 ## Workflow
 
-Scripts live in this skill's `scripts/`. Reply to the user in their language.
+Read `references/API.md` before running the bundled scripts. It defines the native Agent
+submission, polling, file choices, explicit credit approval and retry rules. This branch
+targets test2 until production exposes the same API. Each skill contains its own runnable client.
 
-1. **Create a project:** `pexo-project-create.sh "<short brief>"` → save the `project_id`.
-2. **Upload any files** the user gave: `pexo-upload.sh <project_id> <path>` → save `asset_id`,
-   reference it inline as `<original-image>asset_id</original-image>` (or `<original-video>` /
-   `<original-audio>`). Tags are required — a bare `asset_id` is ignored. Pexo can't crawl URLs —
-   download, then upload.
-3. **Send the request:** `pexo-chat.sh <project_id> "<user's exact words> <asset tags>"`.
-   Copy the user's words exactly; only add asset tags.
-4. **Tell the user** (their language): submitted ✓ · ~15–20 min · `https://pexo.ai/project/<project_id>`.
-5. **Poll:** every ≥60s run `pexo-project-get.sh <project_id>` and act on `nextAction`:
-   - **WAIT** → keep polling; every ~5 polls send a one-line update with the project link.
-   - **RESPOND** → handle each event in `recentMessages`: relay Pexo's text (wait for the
-     user's answer if it asked, then `pexo-chat.sh` their reply); for `preview_video`, run
-     `pexo-asset-get.sh <project_id> <assetId>` per option, show the URLs (A/B/C), let the user
-     pick, then `pexo-chat.sh <project_id> "<choice>" --choice <assetId>`; for a `document`
-     event, mention it to the user.
-   - **DELIVER** → `pexo-asset-get.sh <project_id> <final assetId>`, then send the user the
-     **full** asset URL as plain text — all `?…` query params, never truncated or wrapped in
-     markdown — plus the project link.
-   - **FAILED** → explain `nextActionHint` in plain terms and offer to retry.
-   - **RECONNECT** → `pexo-chat.sh <project_id> "continue"`, tell the user the connection
-     dropped and you're resuming, then keep polling.
-   - Never call `pexo-chat.sh` during WAIT — it triggers duplicate production.
-   - **Taking too long** → if it's been >30 min and still WAIT, tell the user (with the project
-     link + `https://pexo.ai/connect/openclaw`) it's running long; ask whether to keep waiting or
-     stop. Don't poll forever.
+Reply in the user's language, relay their words verbatim and only upload selected files with
+consent. Read every public message and attachment. Never submit chat while waiting or approve
+charges without the user's explicit decision. For revisions, reuse the same project.
 
 ## Revisions
 
 After delivery, the user's tweaks ("make it shorter", "new music", "different shot") reuse the
-**same** project: `pexo-chat.sh <project_id> "<their feedback>"`, then poll again (step 5). Never
+**same** project: `pexo-chat.sh <project_id> "<their feedback>"`, then follow the polling workflow in `references/API.md`. Never
 create a new project for a revision — it throws away Pexo's server-side context.
 
 ## Credits

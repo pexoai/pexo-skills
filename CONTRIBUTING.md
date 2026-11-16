@@ -42,3 +42,14 @@ release).
 - [ ] `README.md` present
 - [ ] no hardcoded secrets
 - [ ] `bash scripts/update-check.sh` still runs without error
+
+## Pexo API clients
+
+Edit the shared client in `skills/pexo-agent/scripts/` and its `references/API.md` and
+`references/TROUBLESHOOTING.md`. Run `python3 scripts/sync-agent-client.py` to bundle those
+files into the scenario skills. Installed skills remain independent; they do not import a
+sibling skill at runtime. CI checks that bundled copies match and runs HTTP fixture tests.
+
+Validate with `python3 scripts/sync-agent-client.py --check` and
+`python3 -m unittest discover -s tests -v`. Native-client releases must wait until the target
+production API has rolled out; feature-branch tests use test2 explicitly.

@@ -93,7 +93,7 @@ else
 fi
 
 # 2. Required variables
-echo "$PASS Authenticated API origin is locked to: $PEXO_BASE_URL"
+echo "$PASS Authenticated Pexo API origin: $PEXO_BASE_URL"
 
 confirmation_mode="${PEXO_BILLING_CONFIRMATION_MODE:-always}"
 case "$confirmation_mode" in

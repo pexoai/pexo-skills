@@ -42,12 +42,6 @@ _pexo_set_config_default() {
     PEXO_TMP_DIR)
       [[ -n "${PEXO_TMP_DIR+x}" ]] || export PEXO_TMP_DIR="$value"
       ;;
-    PEXO_BILLING_CONFIRMATION_HISTORY_MAX_ATTEMPTS)
-      [[ -n "${PEXO_BILLING_CONFIRMATION_HISTORY_MAX_ATTEMPTS+x}" ]] || export PEXO_BILLING_CONFIRMATION_HISTORY_MAX_ATTEMPTS="$value"
-      ;;
-    PEXO_BILLING_CONFIRMATION_HISTORY_RETRY_DELAY)
-      [[ -n "${PEXO_BILLING_CONFIRMATION_HISTORY_RETRY_DELAY+x}" ]] || export PEXO_BILLING_CONFIRMATION_HISTORY_RETRY_DELAY="$value"
-      ;;
     *)
       printf 'Unsupported config key in %s: %s\n' "$_PEXO_CONFIG" "$key" >&2
       return 2
@@ -95,22 +89,19 @@ pexo_load_config() {
 
 pexo_load_config "$_PEXO_CONFIG"
 
-pexo_lock_production_base_url() {
-  local requested="${_PEXO_REQUESTED_BASE_URL%/}"
-
-  if [[ -n "$requested" && "$requested" != "$_PEXO_PRODUCTION_BASE_URL" ]]; then
-    printf 'PEXO_BASE_URL must be exactly %s; refusing to send credentials to %s\n' \
-      "$_PEXO_PRODUCTION_BASE_URL" "$requested" >&2
-    return 2
-  fi
-
-  export PEXO_BASE_URL="$_PEXO_PRODUCTION_BASE_URL"
+# Keep credentials on Pexo origins; the native client can also target test2.
+pexo_select_base_url() {
+  local requested="${_PEXO_REQUESTED_BASE_URL:-$_PEXO_PRODUCTION_BASE_URL}"
+  requested="${requested%/}"
+  case "$requested" in
+    https://pexo.ai|https://test2.pexo.ai) ;;
+    *) printf 'Unsupported Pexo API origin: %s\n' "$requested" >&2; return 2 ;;
+  esac
+  export PEXO_BASE_URL="$requested"
   readonly PEXO_BASE_URL
 }
+pexo_select_base_url
 
-pexo_lock_production_base_url
-
-PEXO_LAST_HTTP_CODE=0
 _PEXO_CONNECT_TIMEOUT="${PEXO_CONNECT_TIMEOUT:-10}"
 _PEXO_REQUEST_TIMEOUT="${PEXO_REQUEST_TIMEOUT:-60}"
 
@@ -129,35 +120,17 @@ pexo_resolve_billing_confirmation_mode() {
   esac
 }
 
-pexo_extract_latest_billing_confirmation() {
-  local history="$1"
-  jq -cer '
-    (if type == "array" then . else (.messages // []) end) as $messages |
-    ($messages[0] // {}) as $latest |
-    select(($latest.content.event // $latest.eventType // "") == "billing_confirmation") |
-    ($latest.content.data // $latest.content // empty) |
-    select(type == "object" and (.confirmation_id // "") != "")
-  ' <<<"$history"
+# New messages and retries carry the same caller-owned admission identity.
+pexo_request_id() {
+  od -An -N16 -tx1 /dev/urandom | tr -d ' \n'
 }
 
-pexo_get_pending_billing_confirmation() {
-  local project_id="$1"
-  local max_attempts="${PEXO_BILLING_CONFIRMATION_HISTORY_MAX_ATTEMPTS:-4}"
-  local retry_delay="${PEXO_BILLING_CONFIRMATION_HISTORY_RETRY_DELAY:-1}"
-  local attempt history confirmation
+pexo_query_value() {
+  jq -nr --arg value "$1" '$value | @uri'
+}
 
-  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
-    history=$(pexo_get "/api/biz/projects/${project_id}/history?page=1&page_size=1&sort_order=DESC")
-    if confirmation=$(pexo_extract_latest_billing_confirmation "$history" 2>/dev/null); then
-      printf '%s\n' "$confirmation"
-      return 0
-    fi
-    if ((attempt < max_attempts)); then
-      sleep $((retry_delay * attempt))
-    fi
-  done
-
-  return 1
+pexo_confirmation_path() {
+  printf '/api/biz/projects/%s/executions/%s/media-confirmation' "$(pexo_query_value "$1")" "$(pexo_query_value "$2")"
 }
 
 pexo_require_config() {
@@ -194,25 +167,6 @@ _pexo_is_json() {
   [[ -n "$payload" ]] && jq -e . >/dev/null 2>&1 <<<"$payload"
 }
 
-_pexo_extract_http_code() {
-  local header_file="$1"
-  awk '/^HTTP\// { code = $2 } END { print code + 0 }' "$header_file"
-}
-
-_pexo_extract_content_type() {
-  local header_file="$1"
-  awk '
-    tolower($1) == "content-type:" {
-      value = $0
-    }
-    END {
-      sub(/\r$/, "", value)
-      sub(/^[^:]*:[[:space:]]*/, "", value)
-      print tolower(value)
-    }
-  ' "$header_file"
-}
-
 _pexo_emit_success() {
   local body="${1:-}"
 
@@ -237,8 +191,6 @@ _pexo_emit_error() {
   local http_code="${1:-0}"
   local body="${2:-}"
   local transport_error="${3:-}"
-
-  export PEXO_LAST_HTTP_CODE="$http_code"
 
   if [[ "$http_code" == "0" && -n "$transport_error" ]]; then
     jq -nc \
@@ -302,66 +254,29 @@ _pexo_emit_error() {
   return 1
 }
 
-_pexo_request_json() {
-  local method="$1"
-  local path="$2"
-  local body="${3:-}"
-  shift 3 || true
-
+_pexo_request_json() (
+  local method="$1" path="$2" body="${3:-}"
+  shift 3
   pexo_require_config
-
-  local body_file header_file err_file
-  local response http_code curl_status=0
-
+  local body_file err_file http_code response
   body_file=$(mktemp)
-  header_file=$(mktemp)
   err_file=$(mktemp)
-
-  if [[ -n "$body" ]]; then
-    http_code=$(curl -sS \
-      --connect-timeout "$_PEXO_CONNECT_TIMEOUT" \
-      --max-time "$_PEXO_REQUEST_TIMEOUT" \
-      -X "$method" \
-      -H "$(_pexo_auth_header)" \
-      -H "Content-Type: application/json" \
-      -D "$header_file" \
-      -o "$body_file" \
-      -w '%{http_code}' \
-      -d "$body" \
-      "$@" \
-      "${PEXO_BASE_URL}${path}" 2>"$err_file") || curl_status=$?
-  else
-    http_code=$(curl -sS \
-      --connect-timeout "$_PEXO_CONNECT_TIMEOUT" \
-      --max-time "$_PEXO_REQUEST_TIMEOUT" \
-      -X "$method" \
-      -H "$(_pexo_auth_header)" \
-      -H "Content-Type: application/json" \
-      -D "$header_file" \
-      -o "$body_file" \
-      -w '%{http_code}' \
-      "$@" \
-      "${PEXO_BASE_URL}${path}" 2>"$err_file") || curl_status=$?
-  fi
-
-  response=$(cat "$body_file")
-  export PEXO_LAST_HTTP_CODE="${http_code:-0}"
-
-  if [[ $curl_status -ne 0 && "${http_code:-0}" == "000" ]]; then
+  trap 'rm -f "$body_file" "$err_file"' EXIT
+  local args=(-sS --connect-timeout "$_PEXO_CONNECT_TIMEOUT" --max-time "$_PEXO_REQUEST_TIMEOUT"
+    -X "$method" -H "$(_pexo_auth_header)" -H "Content-Type: application/json"
+    -o "$body_file" -w '%{http_code}')
+  [[ -z "$body" ]] || args+=(-d "$body")
+  if ! http_code=$(curl "${args[@]}" "$@" "${PEXO_BASE_URL}${path}" 2>"$err_file"); then
     _pexo_emit_error 0 "" "$(cat "$err_file")"
-    rm -f "$body_file" "$header_file" "$err_file"
     return 1
   fi
-
-  if [[ "${http_code:-0}" -ge 400 ]] 2>/dev/null; then
+  response=$(cat "$body_file")
+  if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
     _pexo_emit_error "$http_code" "$response" "$(cat "$err_file")"
-    rm -f "$body_file" "$header_file" "$err_file"
     return 1
   fi
-
   _pexo_emit_success "$response"
-  rm -f "$body_file" "$header_file" "$err_file"
-}
+)
 
 # GET -> extracts .data from BFF wrapper when present
 pexo_get() {
@@ -378,85 +293,6 @@ pexo_post() {
   _pexo_request_json POST "$path" "$body" "$@"
 }
 
-pexo_post_sse_ack() {
-  local path="$1"
-  local body="${2:-}"
-  local timeout="${3:-20}"
-
-  pexo_require_config
-
-  local body_file header_file err_file
-  local response http_code content_type
-
-  body_file=$(mktemp)
-  header_file=$(mktemp)
-  err_file=$(mktemp)
-
-  set +o pipefail
-  if [[ -n "$body" ]]; then
-    curl -sS -N \
-      --connect-timeout "$_PEXO_CONNECT_TIMEOUT" \
-      --max-time "$timeout" \
-      -X POST \
-      -H "$(_pexo_auth_header)" \
-      -H "Content-Type: application/json" \
-      -H "Accept: text/event-stream" \
-      -D "$header_file" \
-      -d "$body" \
-      "${PEXO_BASE_URL}${path}" 2>"$err_file" | tee "$body_file" | sed '/^: stream opened$/q' >/dev/null
-  else
-    curl -sS -N \
-      --connect-timeout "$_PEXO_CONNECT_TIMEOUT" \
-      --max-time "$timeout" \
-      -X POST \
-      -H "$(_pexo_auth_header)" \
-      -H "Content-Type: application/json" \
-      -H "Accept: text/event-stream" \
-      -D "$header_file" \
-      "${PEXO_BASE_URL}${path}" 2>"$err_file" | tee "$body_file" | sed '/^: stream opened$/q' >/dev/null
-  fi
-  set -o pipefail
-
-  response=$(cat "$body_file")
-  http_code=$(_pexo_extract_http_code "$header_file")
-  content_type=$(_pexo_extract_content_type "$header_file")
-  export PEXO_LAST_HTTP_CODE="${http_code:-0}"
-
-  if [[ "${http_code:-0}" -ge 400 ]] 2>/dev/null; then
-    _pexo_emit_error "$http_code" "$response" "$(cat "$err_file")"
-    rm -f "$body_file" "$header_file" "$err_file"
-    return 1
-  fi
-
-  if [[ "$http_code" == "200" && "$content_type" == text/event-stream* && "$response" == *": stream opened"* ]]; then
-    rm -f "$body_file" "$header_file" "$err_file"
-    return 0
-  fi
-
-  if [[ "$http_code" == "0" ]]; then
-    _pexo_emit_error 0 "" "$(cat "$err_file")"
-    rm -f "$body_file" "$header_file" "$err_file"
-    return 1
-  fi
-
-  _pexo_emit_error 0 "" "Timed out waiting for SSE acknowledgement from ${path}"
-  rm -f "$body_file" "$header_file" "$err_file"
-  return 1
-}
-
-# Detect asset type from file extension
-detect_asset_type() {
-  local ext="${1##*.}"
-  ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
-  case "$ext" in
-    jpg|jpeg|png|webp|bmp|tiff|heic|heif) echo "IMAGE" ;;
-    mp4|mov|avi)                          echo "VIDEO" ;;
-    mp3|wav|aac|m4a|ogg|flac)            echo "AUDIO" ;;
-    *) echo "UNKNOWN" ;;
-  esac
-}
-
-# Detect MIME type
 detect_mime() {
   file --brief --mime-type "$1" 2>/dev/null || echo "application/octet-stream"
 }
